@@ -42,7 +42,7 @@ class WarningFound(Exception):
 
 class Downloader():
     def __init__(self):
-        self.lang = ''
+        self.lang = ''  # actually it is the country code
         self.id = ''
         self.url_opener = None
 
