@@ -2,7 +2,7 @@
 
 A command line program to automatically download(scrap) manga from manga web pages.
 
-#Example
+# Example
 `./smd.py -s mangaall 'one piece'`
 
 # Currently supported sites:
