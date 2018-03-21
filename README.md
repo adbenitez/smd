@@ -2,7 +2,7 @@
 
 A command line program to automatically download(scrap) manga from manga web pages.
 
-# Currentry supported sites:
+# Currently supported sites:
 * tumangaonline
 * ninemanga-en
 * ninemanga-es
