@@ -25,7 +25,7 @@ Download 'Death Note' from mangaall.net:
 
 `./smd.py -s mangaall 'Death Note'`
 
-Download 'Bleach from any site in English:
+Download 'Bleach' from any site in English:
 
 `./smd.py --lang en Bleach`
 
