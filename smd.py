@@ -456,7 +456,7 @@ def main(argv):
                                      epilog="Mail bug reports and suggestions "
                                      "to <asieldbenitez@gmail.com>")
     parser.add_argument('-v', '--version', action='version',
-                        version='%(prog)s 1.0')
+                        version='%(prog)s 1.1')
     parser.add_argument("-l", "--list",
                         help="show a list of supported sites and exit",
                         nargs=0, action=ListDowloaders)
