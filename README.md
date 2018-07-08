@@ -42,4 +42,4 @@ This tool uses BeautifulSoup to pull data out of HTML pages, thanks to Leonard R
 > `pip install beautifulsoup4`
 
 ## Support for new sites
-If your favorite site isn't supported yet, open an issue to request it.
+If your favorite site isn't supported yet, open an [issue](https://github.com/adbenitez/jNotifyOSD/issues/new) to request it.
