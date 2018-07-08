@@ -1,6 +1,6 @@
-# Simple Manga Downloader
-
-A command line program to automatically download manga from web sites.
+<p align="center"><img align="center" src="logo/logo.png" alt="smd logo"/></p>
+<h1 align="center">Simple Manga Downloader</h1>
+<p align="center">A command line program to search and automatically download manga from web sites.</p>
 
 ## Currently supported sites
 * Deutsch (DE):
