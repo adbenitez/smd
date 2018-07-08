@@ -9,6 +9,7 @@ A command line program to automatically download manga from web sites.
   * ninemanga-en
   * mangareader
   * mangaall
+  * manganelo
 * Español (ES):
   * ninemanga-es
   * heavenmanga
