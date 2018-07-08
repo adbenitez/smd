@@ -23,27 +23,23 @@ A command line program to automatically download manga from web sites.
 
 ## Examples
 Download 'Death Note' from mangaall.net:
-
-`./smd.py -s mangaall 'Death Note'`
+> `./smd.py -s mangaall 'Death Note'`
 
 Download 'Bleach' from any site in English:
-
-`./smd.py --lang en Bleach`
+> `./smd.py --lang en Bleach`
 
 Download from 10th chapter to 20th of 'Naruto':
-
-`./smd.py --start 10 --stop 20 Naruto`
+> `./smd.py --start 10 --stop 20 Naruto`
 
 List supported Spanish sites:
-
-`./smd.py --lang es -l`
+> `./smd.py --lang es -l`
 
 Show help:
-
-`./smd.py -h`
+> `./smd.py -h`
 
 ## Dependencies
-This tool uses BeautifulSoup to pull data out of HTML pages, thanks to Leonard Richardson.
+This tool uses BeautifulSoup to pull data out of HTML pages, thanks to Leonard Richardson. Use this command to install it:
+> `pip install beautifulsoup4`
 
 ## Support for new sites
 If your favorite site isn't supported yet, open an issue to request it.

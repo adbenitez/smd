@@ -190,7 +190,7 @@ class NineManga(Downloader):
                             'http://%s.ninemanga.com' % site)
 
     def search(self, manga):
-        url = self.site_url+"/search"
+        url = self.site_url+"/search/"
         soup = BeautifulSoup(self.get(url, {'wd': manga}), 'html.parser')
         direlist = soup.find('ul', class_='direlist')
         results = [(self.get_text(a), a['href'])
@@ -290,10 +290,10 @@ class MangaReader(Downloader):
     """
     def __init__(self):
         Downloader.__init__(self, 'mangareader', 'en',
-                            'http://www.mangareader.net')
+                            'https://www.mangareader.net')
 
     def search(self, manga):
-        url = self.site_url+'/actions/search'
+        url = self.site_url+'/actions/search/'
         results = []
         for line in self.get(url, {'q': manga, 'limit': 100}).splitlines():
             line = line.split('|')
@@ -340,7 +340,7 @@ class MangaAll(Downloader):
         self.regex = re.compile(r"var _page_total = '(?P<total>[0-9]+)';")
 
     def search(self, manga):
-        url = self.site_url+'/search'
+        url = self.site_url+'/search/'
         soup = BeautifulSoup(self.get(url, {'q': manga}), 'html.parser')
         divs = soup.find_all('div', class_='mainpage-manga')
         results = []
@@ -390,7 +390,7 @@ class MangaDoor(Downloader):
         Downloader.__init__(self, 'mangadoor', 'es', 'http://mangadoor.com')
 
     def search(self, manga):
-        url = self.site_url+'/search'
+        url = self.site_url+'/search/'
         suggestions = self.get_json(url, {'query': manga})['suggestions']
         results = []
         for sugg in suggestions:
@@ -440,7 +440,7 @@ class Manganelo(Downloader):
             else:
                 query_str += ' '
         query_str = '_'.join(query_str.split())
-        url = self.site_url+'/home_json_search'
+        url = self.site_url+'/home_json_search/'
         data = {'search_style': 'tentruyen', 'searchword': query_str}
         data = self.get_json(url, data, method='POST')
         results = []
@@ -517,12 +517,12 @@ def main(argv):
     parser.add_argument("-l", "--list",
                         help="show a list of supported sites and exit",
                         nargs=0, action=ListDowloaders)
-    parser.add_argument("--try",
+    parser.add_argument("--tryall",
                         help="try to download manga from other sites if "
                         "the selected site have failed, when used with "
                         "option --lang, only try sites with the selected "
                         "language",
-                        dest="tryall", action="store_true")
+                        action="store_true")
     parser.add_argument("-f", "--file",
                         help="use a file as input for mangas to download, the "
                         "file must have a list of manga names one by line",
