@@ -18,7 +18,7 @@ For more information see <http://www.gnu.org/licenses/>.
 '''
 from abc import ABC, abstractmethod
 import argparse
-import http.cookiejar
+from http.cookiejar import MozillaCookieJar
 import imghdr
 import json
 import logging
@@ -49,7 +49,7 @@ class Downloader(ABC):
         self.name = name
         self.lang = lang
         self.site_url = site_url
-        cookie_jar = http.cookiejar.MozillaCookieJar()
+        cookie_jar = MozillaCookieJar()
         # cookie_jar.load('cookies.txt')
         self.url_opener = urllib.request.build_opener(
             urllib.request.HTTPCookieProcessor(cookie_jar))
@@ -101,21 +101,31 @@ class Downloader(ABC):
                 pass
         return success
 
-    def get_json(self, url):
-        return json.loads(self.get(url))
+    def get_json(self, url, data={}, method='GET'):
+        return json.loads(self.get(url, data, method))
 
     def download_img(self, url, name):
-        img = self.get(url, False)
+        img = self.get(url, decode=False)
         ext = imghdr.what("", h=img)
         ext = '' if ext is None else '.'+ext
         with open(name+ext, 'bw') as outf:
             outf.write(img)
 
-    def get(self, url, decode=True):
+    def get(self, url, data={}, method='GET', decode=True):
+        method = method.upper()
+        data = urllib.parse.urlencode(data)
+        if method == 'GET':
+            if data:
+                url = url+'?'+data
+            data = None
+        elif method == 'POST':
+            data = data.encode('ascii')
+        else:
+            raise Exception("Only GET and POST methods are implemented.")
         while True:
             try:
                 self.logger.debug('Downloading: %s', url)
-                with self.url_opener.open(url) as resp:
+                with self.url_opener.open(url, data) as resp:
                     if decode:
                         return resp.read().decode(errors='ignore')
                     else:
@@ -145,13 +155,10 @@ class Downloader(ABC):
 
     @staticmethod
     def _select_manga(mangas):
-        count = len(mangas)
-        if count == 1:
-            return mangas[0]
         print("Found:")
         for i, manga in enumerate(mangas, 1):
             print("%s. %s" % (i, manga[0]))
-        i = int(input("Select manga to download [1-%s]:" % count))
+        i = int(input("Select manga to download [1-%s]:" % len(mangas)))
         return mangas[i-1]
 
     @staticmethod
@@ -183,9 +190,8 @@ class NineManga(Downloader):
                             'http://%s.ninemanga.com' % site)
 
     def search(self, manga):
-        url = "%s/search/?wd=%s" % (self.site_url,
-                                    urllib.parse.quote_plus(manga))
-        soup = BeautifulSoup(self.get(url), 'html.parser')
+        url = self.site_url+"/search"
+        soup = BeautifulSoup(self.get(url, {'wd': manga}), 'html.parser')
         direlist = soup.find('ul', class_='direlist')
         results = [(self.get_text(a), a['href'])
                    for a in direlist.find_all('a', class_='bookname')]
@@ -240,6 +246,7 @@ class HeavenManga(Downloader):
                             'http://heavenmanga.com')
 
     def search(self, manga):
+        # TODO: find a better way to do this:
         url = '%s/buscar/%s.html' % (self.site_url,
                                      urllib.parse.quote_plus(manga))
         # page restriction: len(manga) must to be >= 4
@@ -286,10 +293,9 @@ class MangaReader(Downloader):
                             'http://www.mangareader.net')
 
     def search(self, manga):
-        url = '%s/actions/search/?q=%s&limit=100'
-        url = url % (self.site_url, urllib.parse.quote_plus(manga))
+        url = self.site_url+'/actions/search'
         results = []
-        for line in self.get(url).splitlines():
+        for line in self.get(url, {'q': manga, 'limit': 100}).splitlines():
             line = line.split('|')
             if len(line) != 6:
                 self.logger.warning("unknow line format: %s", '|'.join(line))
@@ -334,9 +340,8 @@ class MangaAll(Downloader):
         self.regex = re.compile(r"var _page_total = '(?P<total>[0-9]+)';")
 
     def search(self, manga):
-        url = '%s/search?q=%s' % (self.site_url,
-                                  urllib.parse.quote_plus(manga))
-        soup = BeautifulSoup(self.get(url), 'html.parser')
+        url = self.site_url+'/search'
+        soup = BeautifulSoup(self.get(url, {'q': manga}), 'html.parser')
         divs = soup.find_all('div', class_='mainpage-manga')
         results = []
         for div in divs:
@@ -385,9 +390,8 @@ class MangaDoor(Downloader):
         Downloader.__init__(self, 'mangadoor', 'es', 'http://mangadoor.com')
 
     def search(self, manga):
-        url = '%s/search?query=%s' % (self.site_url,
-                                      urllib.parse.quote_plus(manga))
-        suggestions = self.get_json(url)['suggestions']
+        url = self.site_url+'/search'
+        suggestions = self.get_json(url, {'query': manga})['suggestions']
         results = []
         for sugg in suggestions:
             results.append((sugg['value'], self.site_url+'/manga/'+sugg['data']))
@@ -420,6 +424,58 @@ class MangaDoor(Downloader):
                 print()
 
 
+class Manganelo(Downloader):
+    '''
+    Downloads manga from manganelo.com
+    '''
+    def __init__(self):
+        Downloader.__init__(self, 'manganelo', 'en',
+                            'https://manganelo.com')
+
+    def search(self, manga):
+        query_str = ''
+        for char in manga:
+            if char.isalnum():
+                query_str += char
+            else:
+                query_str += ' '
+        query_str = '_'.join(query_str.split())
+        url = self.site_url+'/home_json_search'
+        data = {'search_style': 'tentruyen', 'searchword': query_str}
+        data = self.get_json(url, data, method='POST')
+        results = []
+        for result in data:
+            name = self.get_text(BeautifulSoup(result['name'], 'html.parser'))
+            url = self.site_url+'/manga/'+result['nameunsigned']
+            results.append((name, url))
+        return results
+
+    def _download(self, manga_dir, manga, url, start, stop):
+        self.logger.info("Getting chapters list of '%s' ...", manga)
+        soup = BeautifulSoup(self.get(url), 'html.parser')
+        div = soup.find('div', class_='chapter-list')
+        chapters = [(self.get_text(a), 'https:'+a['href'])
+                    for a in div.find_all('a')]
+        self.logger.info("Found %i chapters for '%s'", len(chapters), manga)
+        chapters.reverse()
+        self.logger.info("Downloading '%s' [%i-%i]:",
+                         manga, start+1, len(chapters) if stop is None else stop)
+        for chap_title, url in chapters[start:stop]:
+            chap_dir = os.path.join(manga_dir, chap_title)
+            self.mkdir(chap_dir)
+            soup = BeautifulSoup(self.get(url), 'html.parser')
+            div = soup.find('div', id='vungdoc')
+            images = [img['src'] for img in div.find_all('img')]
+            img_count = len(images)
+            for i, url in enumerate(images):
+                print("\r[%s] Downloading '%s' (image: %i/%i)"
+                      % (self.name, chap_title, i, img_count), end='')
+                name = os.path.join(chap_dir, self.gen_name(i, img_count))
+                self.download_img(url, name)
+            if img_count > 0:
+                print()
+
+
 def main(argv):
     downloaders = [NineManga('en'),
                    NineManga('es'),
@@ -431,6 +487,7 @@ def main(argv):
                    MangaReader(),
                    MangaAll(),
                    MangaDoor(),
+                   Manganelo(),
                    ]
 
     class ListDowloaders(argparse.Action):
