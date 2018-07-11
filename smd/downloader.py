@@ -1,57 +1,36 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-'''
-smd --- Simple Manga Downloader.
-Copyright (c) 2017-2018 Asiel Diaz Benitez.
+# Use of this source code is governed by GPL3 license that can be
+# found in the LICENSE file.
 
-smd is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-For more information see <http://www.gnu.org/licenses/>.
-'''
 from abc import ABC, abstractmethod
-import argparse
 from http.cookiejar import MozillaCookieJar
 import imghdr
 import json
 import logging
 import os
-import random
+from random import randrange
 import re
-import sys
-from urllib.request import Request
-import urllib.request
-import urllib.parse
+from urllib.request import build_opener, HTTPCookieProcessor, Request
+from urllib.parse import urlencode, quote_plus
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(ROOT, 'libs'))
+from bs4 import BeautifulSoup
 
-try:
-    from bs4 import BeautifulSoup
-except:
-    print("This program needs BeautifulSoup to work,",
-          "to install it use the command: pip install beautifulsoup4")
-    sys.exit(1)
-
-ua_list = [
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:57.0) Gecko/20100101 Firefox/57.0',
-    'Mozilla/5.0 (X11; Ubuntu; Linux i686 on x86_64; rv:60.0) Gecko/20100101 Firefox/60.0',
+_UA_LIST = [
+    'Mozilla/5.0 (X11; Ubuntu; Linux i686 on x86_64; rv:60.0) Gecko/20100101 '
+    'Firefox/60.0',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:57.0) Gecko/20100101 '
+    'Firefox/57.0',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:10.0) Gecko/20100101 '
+    'Firefox/60.0'
 ]
-USER_AGENT = ua_list[random.randrange(0, len(ua_list))]
+USER_AGENT = _UA_LIST[randrange(0, len(_UA_LIST))]
 
 
 class Downloader(ABC):
     """
     Abstract class base of all manga downloaders.
     """
-    logfile = os.path.join(ROOT, 'smd.log')
+    logfile = os.path.join(os.path.expanduser('~'), 'smd.log')
     verbose = False
 
     def __init__(self, name, lang, site_url):
@@ -60,8 +39,7 @@ class Downloader(ABC):
         self.site_url = site_url
         cookie_jar = MozillaCookieJar()
         # cookie_jar.load('cookies.txt')
-        self.url_opener = urllib.request.build_opener(
-            urllib.request.HTTPCookieProcessor(cookie_jar))
+        self.url_opener = build_opener(HTTPCookieProcessor(cookie_jar))
         self.url_opener.addheaders = [
             ('Host', self.site_url),
             ('Referer', self.site_url),
@@ -95,7 +73,8 @@ class Downloader(ABC):
     def get_images(self, chapter_url):
         '''
         Receives the chapter URL and returns the list of images for the given
-        chapter, or a list of URL where the images can be found using `get_image`.
+        chapter, or a list of URL where the images can be found using
+        `get_image`.
         '''
         pass
 
@@ -107,6 +86,11 @@ class Downloader(ABC):
         return image_url
 
     def download(self, manga, start=0, stop=None):
+        '''
+        Searches for `manga` and, if found, downloads it from chapter `start`
+        to `stop`, if only `start` is given all chapter after `start` are
+        downloaded.
+        '''
         success = True
         try:
             self.logger.info("Searching for '%s' ...", manga)
@@ -119,7 +103,8 @@ class Downloader(ABC):
             self._mkdir(manga_dir)  # TODO: avoid invalid path characters
             self.logger.info("Getting chapters list of '%s' ...", manga)
             chapters = self.get_chapters(url)
-            self.logger.info("Found %i chapters for '%s'", len(chapters), manga)
+            self.logger.info("Found %i chapters for '%s'",
+                             len(chapters), manga)
             self.logger.info("Downloading '%s' [%i-%i]:", manga, start+1,
                              len(chapters) if stop is None else stop)
             for chap_title, url in chapters[start:stop]:
@@ -133,13 +118,12 @@ class Downloader(ABC):
                 for i, url in enumerate(images, 1):
                     print("\r[%s] Downloading '%s' (image: %i/%i)"
                           % (self.name, chap_title, i, img_count), end='')
-                    url = self.get_image(url)
                     name = os.path.join(chap_dir, str(i).zfill(dcount))
-                    self.download_img(url, name)
+                    self.download_img(self.get_image(url), name)
                 if img_count > 0:
                     print()
-        except KeyboardInterrupt as ex:
-            raise ex
+        except KeyboardInterrupt:
+            raise
         except Exception as ex:
             # exec_type, exc_obj, exc_tb = sys.exc_info()
             self.logger.exception(ex)
@@ -163,7 +147,7 @@ class Downloader(ABC):
 
     def get(self, url, data={}, method='GET', xhr=False, decode=True):
         method = method.upper()
-        data = urllib.parse.urlencode(data)
+        data = urlencode(data)
         if method == 'GET':
             if data:
                 url = url+'?'+data
@@ -212,8 +196,16 @@ class Downloader(ABC):
         dcount = len(str(len(mangas)))
         for i, manga in enumerate(mangas, 1):
             print("%s. %s" % (str(i).rjust(dcount), manga[0]))
-        i = int(input("Select manga to download [1-%s]:" % len(mangas)))
-        return mangas[i-1]
+        while True:
+            try:
+                i = int(input("Select manga to download [1-%s]:"
+                              % len(mangas))) - 1
+                if i >= 0 and i < len(mangas):
+                    break
+            except ValueError:
+                pass
+            print("Invalid selection. Try again.")
+        return mangas[i]
 
     @staticmethod
     def _mkdir(path):
@@ -286,8 +278,7 @@ class HeavenManga(Downloader):
 
     def search(self, manga):
         # TODO: find a better way to do this:
-        url = '%s/buscar/%s.html' % (self.site_url,
-                                     urllib.parse.quote_plus(manga))
+        url = '%s/buscar/%s.html' % (self.site_url, quote_plus(manga))
         # page restriction: len(manga) must to be >= 4
         soup = BeautifulSoup(self.get(url), 'html.parser')
         divs = soup.find_all('div', class_='cont_manga')
@@ -402,7 +393,8 @@ class MangaDoor(Downloader):
         suggestions = self.get_json(url, {'query': manga})['suggestions']
         results = []
         for sugg in suggestions:
-            results.append((sugg['value'], self.site_url+'/manga/'+sugg['data']))
+            url = self.site_url+'/manga/'+sugg['data']
+            results.append((sugg['value'], url))
         return results
 
     def get_chapters(self, manga_url):
@@ -473,17 +465,17 @@ class MangaHere(Downloader):
 
     def search(self, manga):
         url = self.site_url+'/ajax/search.php'
-        json = self.get_json(url, {'query': manga})
+        data = self.get_json(url, {'query': manga})
         results = []
-        for title, url in zip(json['suggestions'], json['data']):
+        for title, url in zip(data['suggestions'], data['data']):
             results.append((title, 'http:'+url))
         return results
 
     def get_chapters(self, manga_url):
         soup = BeautifulSoup(self.get(manga_url), 'html.parser')
-        ul = soup.find('div', class_='detail_list').ul
+        ulist = soup.find('div', class_='detail_list').ul
         chapters = [(self.get_text(a), 'http:'+a['href'])
-                    for a in ul.find_all('a')]
+                    for a in ulist.find_all('a')]
         chapters.reverse()
         return chapters
 
@@ -496,120 +488,3 @@ class MangaHere(Downloader):
     def get_image(self, image_url):
         soup = BeautifulSoup(self.get(image_url), 'html.parser')
         return soup.find('img', id='image')['src']
-
-
-def main(argv):
-    downloaders = [NineManga('en'),
-                   NineManga('es'),
-                   NineManga('ru'),
-                   NineManga('de'),
-                   NineManga('it'),
-                   NineManga('br'),
-                   HeavenManga(),
-                   MangaReader(),
-                   MangaAll(),
-                   MangaDoor(),
-                   MangaNelo(),
-                   MangaHere()]
-    downloaders.sort(key=lambda d: d.lang)
-
-    class ListDowloaders(argparse.Action):
-        def __call__(self, parser, namespace, values, option_string=None):
-            print("Supported sites (%i):" % len(downloaders))
-            for downloader in downloaders:
-                print(" * %s (%s)" % (downloader, downloader.lang))
-            sys.exit()
-
-    class SetLanguage(argparse.Action):
-        def __call__(self, parser, namespace, lang, option_string=None):
-            nonlocal downloaders
-            downloaders = [d for d in downloaders if d.lang == lang]
-
-    def download(downloaders, manga, args):
-        downloader = downloaders.pop(0)
-        if not downloader.download(manga, args.start, args.stop):
-            downloader.logger.warning("Download have failed :(")
-            if args.tryall and downloaders:
-                download(downloaders, manga, args)
-
-    def select_downloader():
-        print('Supported sites:')
-        dcount = len(str(len(downloaders)))
-        for i, d in enumerate(downloaders, 1):
-            print("%s. %s (%s)" % (str(i).rjust(dcount), d.name, d.lang))
-        i = int(input("Choose a site [1-%s]:" % len(downloaders)))
-        downloaders.insert(0, downloaders.pop(i-1))
-
-    parser = argparse.ArgumentParser(description="Simple Manga Downloader",
-                                     epilog="Mail bug reports and suggestions "
-                                     "to <asieldbenitez@gmail.com>")
-    parser.add_argument('-v', '--version', action='version',
-                        version='%(prog)s 1.3')
-    parser.add_argument('--license',
-                        help='shows program copyright notice')
-    parser.add_argument("-l", "--list",
-                        help="show a list of supported sites and exit",
-                        nargs=0, action=ListDowloaders)
-    parser.add_argument("--tryall",
-                        help="try to download manga from other sites if "
-                        "the selected site have failed, when used with "
-                        "option --lang, only try sites with the selected "
-                        "language",
-                        action="store_true")
-    parser.add_argument("-f", "--file",
-                        help="use a file as input for mangas to download, the "
-                        "file must have a list of manga names one by line",
-                        nargs='?', type=argparse.FileType('r'),
-                        const=sys.stdin)
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument("-s", "--site",
-                       help="the site from which to download",
-                       metavar="SITE")
-    group.add_argument("--lang",
-                       help="download from a site of the selected language "
-                       "(possible values: %(choices)s)",
-                       metavar="LANG",
-                       choices=set(d.lang for d in downloaders),
-                       action=SetLanguage)
-    parser.add_argument("--start",
-                        help="download starting from the given chapter",
-                        type=int, default=1)
-    parser.add_argument("--stop",
-                        help="download up to the given chapter",
-                        type=int)
-    parser.add_argument("mangas",
-                        help="the name of the manga to be downloaded",
-                        metavar="MANGA", nargs="*")
-    args = parser.parse_args(argv)
-
-    if args.file:
-        args.mangas = []
-        for manga in args.file.readlines():
-            manga = manga.replace('\n', '').replace('-', ' ').split()
-            manga = ' '.join([word.capitalize() for word in manga
-                              if word and manga[0] != '#'])
-            if manga:
-                args.mangas.append(manga)
-    if not args.mangas:
-        parser.print_usage()
-    args.start -= 1
-    if args.site is not None:
-        for d in downloaders:
-            if d.name == args.site.lower():
-                downloaders.remove(d)
-                downloaders.insert(0, d)
-                break
-        else:
-            print("ERROR - Unknow site: '%s'" % args.site)
-            select_downloader()
-    else:
-        select_downloader()
-    for manga in args.mangas:
-        download(downloaders.copy(), manga, args)
-
-
-if __name__ == '__main__':
-    try:
-        main(sys.argv[1:])
-    except KeyboardInterrupt:
-        print('\n[*] Operation canceled, Sayonara! :)')

@@ -24,28 +24,41 @@ A tool to search and automatically download manga from web sites, with support f
 * Русский (RU):
   * NineManga-ru
 
+## Installation
+To run this program you need to have **python3** installed in your machine, for a python installation guide look [here](http://docs.python-guide.org/en/latest/starting/installation/).
+
+To install **smd** open your terminal and execute the following command:
+> `pip install smd`
+
+For help installing packages look [here](https://packaging.python.org/tutorials/installing-packages/).
+
 ## Examples
-Show a list of supported sites to select from where to download 'One Piece':
-> `./smd.py 'One Piece'`
+To select site and manga interactively just run:
+> `smd`
 
-Search mangaall.net for mangas containing the word 'Death' in its name, then select which one to download:
-> `./smd.py -s mangaall 'Death'`
+To search (and download) 'One Piece' and select site interactively:
+> `smd 'One Piece'`
 
-Show a list of sites with in English language, to select from where to download 'Bleach':
-> `./smd.py --lang en Bleach`
+To search mangaall.net for mangas containing the word 'love' in its name, and select which one to download:
+> `smd -s mangaall love`
 
-Download from 10th chapter to 20th of 'Naruto' from MangaHere:
-> `./smd.py --start 10 --stop 20 -s mangahere Naruto`
+To select a site with English language, and search/download 'Bleach':
+> `smd --lang en Bleach`
+
+To select site interactively and download from chapter 10th to 20th of 'Naruto':
+> `smd --start 10 --stop 20 Naruto`
+
+List all supported sites:
+> `smd -l`
 
 List supported Spanish sites:
-> `./smd.py --lang es -l`
+> `smd --lang es -l`
 
 To see all available options use:
-> `./smd.py -h`
+> `smd -h`
 
 ## Dependencies
-This tool uses BeautifulSoup to pull data out of HTML pages, thanks to Leonard Richardson. Use this command to install it:
-> `pip install beautifulsoup4`
+This tool uses **BeautifulSoup** to pull data out of HTML pages, thanks to Leonard Richardson. You don't have to install the dependencies manually unless you are installing from source.
 
 ## Support for new sites
 If your favorite site isn't supported yet, open an [issue](https://github.com/adbenitez/smd/issues/new) to request it.
