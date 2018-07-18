@@ -1,36 +1,51 @@
 # -*- coding: utf-8 -*-
 # Use of this source code is governed by GPL3 license that can be
 # found in the LICENSE file.
+'''
+This module provides the downloaders able to grab content from the
+supported sites
+'''
 
 from abc import ABC, abstractmethod
 from http.cookiejar import MozillaCookieJar
 import imghdr
 import json
 import logging
+import logging.handlers
 import os
-from random import randrange
+from random import choice
 import re
+import sys
 from urllib.request import build_opener, HTTPCookieProcessor, Request
 from urllib.parse import urlencode, quote_plus
 
 from bs4 import BeautifulSoup
 
-_UA_LIST = [
+USER_AGENT = choice([
     'Mozilla/5.0 (X11; Ubuntu; Linux i686 on x86_64; rv:60.0) Gecko/20100101 '
     'Firefox/60.0',
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:57.0) Gecko/20100101 '
     'Firefox/57.0',
     'Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:10.0) Gecko/20100101 '
     'Firefox/60.0'
-]
-USER_AGENT = _UA_LIST[randrange(0, len(_UA_LIST))]
+])
+
+
+class ConsoleFilter:
+    '''
+    A filter to avoid showing exceptions stack traces text in user is terminal.
+    '''
+    def filter(self, record):
+        record.exc_info = None
+        record.exc_text = None
+        return True
 
 
 class Downloader(ABC):
     """
     Abstract class base of all manga downloaders.
     """
-    logfile = os.path.join(os.path.expanduser('~'), 'smd.log')
+    logfile = 'smd.log'
     verbose = False
 
     def __init__(self, name, lang, site_url):
@@ -38,7 +53,7 @@ class Downloader(ABC):
         self.lang = lang
         self.site_url = site_url
         cookie_jar = MozillaCookieJar()
-        # cookie_jar.load('cookies.txt')
+        # cookie_jar.load('cookies.txt') # TODO: save and load cookies
         self.url_opener = build_opener(HTTPCookieProcessor(cookie_jar))
         self.url_opener.addheaders = [
             ('Host', self.site_url),
@@ -85,39 +100,37 @@ class Downloader(ABC):
         '''
         return image_url
 
-    def download(self, manga, start=0, stop=None):
+    def download(self, manga, chapter_selectors=None):
         '''
-        Searches for `manga` and, if found, downloads it from chapter `start`
-        to `stop`, if only `start` is given all chapter after `start` are
-        downloaded.
+        Searches for `manga` and, if found, downloads chapters given in
+        `chapter_selectors` are downloaded.
         '''
         success = True
         try:
             self.logger.info("Searching for '%s' ...", manga)
             mangas = self.search(manga)
             if mangas:
-                manga, url = Downloader._select_manga(mangas)
+                manga, url = Downloader.select_manga(mangas)
             else:
                 return False
-            manga_dir = os.path.abspath(manga)
-            self._mkdir(manga_dir)  # TODO: avoid invalid path characters
+            manga_dir = self._mkdir(os.path.abspath('.'), manga)
             self.logger.info("Getting chapters list of '%s' ...", manga)
             chapters = self.get_chapters(url)
             self.logger.info("Found %i chapters for '%s'",
                              len(chapters), manga)
-            self.logger.info("Downloading '%s' [%i-%i]:", manga, start+1,
-                             len(chapters) if stop is None else stop)
-            for chap_title, url in chapters[start:stop]:
-                chap_dir = os.path.join(manga_dir, chap_title)
-                self._mkdir(chap_dir)
+            chapters = self._select_chapters(chapters, chapter_selectors)
+            self.logger.info("Selected %i chapters to download", len(chapters))
+            self.logger.info("Downloading '%s':", manga)
+            for chap_title, url in chapters:
+                chap_dir = self._mkdir(manga_dir, chap_title)
                 self.logger.info("Getting images list for chapter '%s' ...",
                                  chap_title)
                 images = self.get_images(url)
                 img_count = len(images)
                 dcount = len(str(img_count))
                 for i, url in enumerate(images, 1):
-                    print("\r[%s] Downloading '%s' (image: %i/%i)"
-                          % (self.name, chap_title, i, img_count), end='')
+                    print("\r[{}] Downloading '{}' (image: {}/{})"
+                          .format(self.name, chap_title, i, img_count), end='')
                     name = os.path.join(chap_dir, str(i).zfill(dcount))
                     self.download_img(self.get_image(url), name)
                 if img_count > 0:
@@ -128,24 +141,23 @@ class Downloader(ABC):
             # exec_type, exc_obj, exc_tb = sys.exc_info()
             self.logger.exception(ex)
             success = False
-        if not success:
-            try:
-                os.rmdir(manga_dir)  # remove if empty
-            except:
-                pass
         return success
 
-    def get_json(self, url, data={}, method='GET'):
+    def get_json(self, url, data=None, method='GET'):
         return json.loads(self.get(url, data=data, method=method, xhr=True))
 
     def download_img(self, url, name):
         img = self.get(url, decode=False)
         ext = imghdr.what("", h=img)
         ext = '' if ext is None else '.'+ext
-        with open(name+ext, 'bw') as outf:
+        file_name = name+ext
+        with open(file_name, 'bw') as outf:
             outf.write(img)
+        return file_name
 
-    def get(self, url, data={}, method='GET', xhr=False, decode=True):
+    def get(self, url, data=None, method='GET', xhr=False, decode=True):
+        if data is None:
+            data = {}
         method = method.upper()
         data = urlencode(data)
         if method == 'GET':
@@ -160,6 +172,7 @@ class Downloader(ABC):
             headers = {'X-Requested-With': 'XMLHttpRequest'}
         else:
             headers = {}
+        errors = 0
         while True:
             try:
                 self.logger.debug('Downloading: %s', url)
@@ -169,17 +182,22 @@ class Downloader(ABC):
                     else:
                         return resp.read()
             except ConnectionResetError as err:
+                if errors > 5:
+                    raise
+                errors += 1
                 self.logger.debug(err)
 
     def _init_logger(self):
-        self.logger = logging.getLogger(self.name)
+        self.logger = logging.Logger(self.name)
         self.logger.parent = None
-        fh = logging.FileHandler(Downloader.logfile, mode='w')
+        fh = logging.handlers.RotatingFileHandler(Downloader.logfile,
+                                                  maxBytes=10000000)
         fh.setLevel(logging.DEBUG)
         ch = logging.StreamHandler()
         if Downloader.verbose:
             ch.setLevel(logging.DEBUG)
         else:
+            ch.addFilter(ConsoleFilter())
             ch.setLevel(logging.INFO)
         formatter = logging.Formatter('%(asctime)s - %(name)s - '
                                       '%(levelname)s - %(message)s')
@@ -187,19 +205,74 @@ class Downloader(ABC):
         formatter = logging.Formatter('[%(name)s] - '
                                       '%(levelname)s - %(message)s')
         ch.setFormatter(formatter)
-        self.logger.addHandler(fh)
+        self.logger.addHandler(fh)  # order is important because ConsoleFilter
         self.logger.addHandler(ch)
 
+    def _select_chapters(self, chapters, selectors):
+        '''
+        chapters: a list of chapters.
+        selectors: a string of comma=separated selectors.
+
+        returns: a set of selected chapters.
+        '''
+        if not selectors:
+            return chapters
+        selectors = selectors.split(',')
+        chaps = set()
+        ignored_chaps = set()
+        for selector in selectors:
+            ignore = False
+            selector = selector.replace(' ', '')
+            s = selector[:]
+            if s.startswith('!'):
+                ignore = True
+                s = s[1:]
+            if set(s) - set('1234567890-:'):
+                self.logger.error("Invalid chapter selector: '%s'", selector)
+                sys.exit(1)
+            try:
+                s = s.split(':')
+                if s[0]:
+                    i = int(s[0])
+                    if i > 0:
+                        s[0] = str(i-1)
+                s = ':'.join(s)
+                ch = eval("chapters[{}]".format(s))
+                if type(ch) is list:
+                    if not ch:
+                        self.logger.error("Selector '%s' did not selected "
+                                          "any chapters.", selector)
+                        sys.exit(1)
+                    elif ignore:
+                        ignored_chaps.update(ch)
+                    else:
+                        chaps.update(ch)
+                else:
+                    if ignore:
+                        ignored_chaps.add(ch)
+                    else:
+                        chaps.add(ch)
+            except (SyntaxError, ValueError):
+                self.logger.error("Invalid chapter selector: '%s'", selector)
+                sys.exit(1)
+            except IndexError:
+                self.logger.error("Chapter selector out of range: '%s'",
+                                  selector)
+                sys.exit(1)
+        if not chaps:
+            chaps = set(chapters)
+        return chaps - ignored_chaps
+
     @staticmethod
-    def _select_manga(mangas):
+    def select_manga(mangas):
         print("Found:")
         dcount = len(str(len(mangas)))
         for i, manga in enumerate(mangas, 1):
-            print("%s. %s" % (str(i).rjust(dcount), manga[0]))
+            print("{}. {}".format(str(i).rjust(dcount), manga[0]))
         while True:
             try:
-                i = int(input("Select manga to download [1-%s]:"
-                              % len(mangas))) - 1
+                i = int(input("Select manga to download [1-{}]:"
+                              .format(len(mangas)))) - 1
                 if i >= 0 and i < len(mangas):
                     break
             except ValueError:
@@ -207,14 +280,24 @@ class Downloader(ABC):
             print("Invalid selection. Try again.")
         return mangas[i]
 
-    @staticmethod
-    def _mkdir(path):
-        if os.path.exists(path):
-            if not os.path.isdir(path):
-                raise Exception("Can't create directory,"
-                                " file '%s' already exist." % path)
-        else:
-            os.mkdir(path)
+    def _mkdir(self, dirname, basename):
+        while True:
+            path = os.path.join(dirname, basename)
+            if os.path.exists(path):
+                if not os.path.isdir(path):
+                    self.logger.error("Can't create folder: File '%s' "
+                                      "already exists.", basename)
+                else:
+                    break
+            else:
+                try:
+                    os.mkdir(path)
+                    break
+                except FileNotFoundError:
+                    self.logger.error("Can't create folder '%s': "
+                                      "Invalid name.", basename)
+            basename = input("Enter a new folder name:")
+        return path
 
     @staticmethod
     def get_text(tag):
@@ -228,7 +311,7 @@ class NineManga(Downloader):
     def __init__(self, site):
         lang = 'pt' if site == 'br' else site
         Downloader.__init__(self, 'ninemanga-'+site, lang,
-                            'http://%s.ninemanga.com' % site)
+                            'http://{}.ninemanga.com'.format(site))
 
     def search(self, manga):
         url = self.site_url+"/search/"
@@ -242,8 +325,8 @@ class NineManga(Downloader):
             for page in pagelist.find_all('a')[1:-1]:
                 soup = BeautifulSoup(self.get(page['href']), 'html.parser')
                 direlist = soup.find('ul', class_='direlist')
-                for a in direlist.find_all('a', class_='bookname'):
-                    results.append((self.get_text(a), a['href']))
+                results.extend((self.get_text(a), a['href']) for a in
+                               direlist.find_all('a', class_='bookname'))
         return results
 
     def get_chapters(self, manga_url):
@@ -278,7 +361,7 @@ class HeavenManga(Downloader):
 
     def search(self, manga):
         # TODO: find a better way to do this:
-        url = '%s/buscar/%s.html' % (self.site_url, quote_plus(manga))
+        url = '{}/buscar/{}.html'.format(self.site_url, quote_plus(manga))
         # page restriction: len(manga) must to be >= 4
         soup = BeautifulSoup(self.get(url), 'html.parser')
         divs = soup.find_all('div', class_='cont_manga')
@@ -353,10 +436,8 @@ class MangaAll(Downloader):
         url = self.site_url+'/search/'
         soup = BeautifulSoup(self.get(url, {'q': manga}), 'html.parser')
         divs = soup.find_all('div', class_='mainpage-manga')
-        results = []
-        for div in divs:
-            a = div.find('div', 'media-body').a
-            results.append((a['title'], a['href']))
+        results = [(a['title'], a['href'])
+                   for a in (div.find('div', 'media-body').a for div in divs)]
         # TODO: get other results pages
         return results
 
@@ -391,10 +472,8 @@ class MangaDoor(Downloader):
     def search(self, manga):
         url = self.site_url+'/search/'
         suggestions = self.get_json(url, {'query': manga})['suggestions']
-        results = []
-        for sugg in suggestions:
-            url = self.site_url+'/manga/'+sugg['data']
-            results.append((sugg['value'], url))
+        results = [(sugg['value'], self.site_url+'/manga/'+sugg['data'])
+                   for sugg in suggestions]
         return results
 
     def get_chapters(self, manga_url):
@@ -432,12 +511,9 @@ class MangaNelo(Downloader):
         data = {'search_style': 'tentruyen', 'searchword': query_str}
         url = self.site_url+'/home_json_search/'
         data = self.get_json(url, data, method='POST')
-        results = []
-        for result in data:
-            name = self.get_text(BeautifulSoup(result['name'], 'html.parser'))
-            url = self.site_url+'/manga/'+result['nameunsigned']
-            results.append((name, url))
-        return results
+        return [(self.get_text(BeautifulSoup(result['name'], 'html.parser')),
+                 self.site_url+'/manga/'+result['nameunsigned'])
+                for result in data]
 
     def get_chapters(self, manga_url):
         soup = BeautifulSoup(self.get(manga_url), 'html.parser')
@@ -466,9 +542,8 @@ class MangaHere(Downloader):
     def search(self, manga):
         url = self.site_url+'/ajax/search.php'
         data = self.get_json(url, {'query': manga})
-        results = []
-        for title, url in zip(data['suggestions'], data['data']):
-            results.append((title, 'http:'+url))
+        results = [(title, 'http:'+url)
+                   for title, url in zip(data['suggestions'], data['data'])]
         return results
 
     def get_chapters(self, manga_url):

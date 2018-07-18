@@ -1,4 +1,4 @@
-<p align="center"><img align="center" src="logo/logo.png" alt="smd logo"/></p>
+<p align="center"><img align="center" src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Panpaka_and_Punyan.png" alt="smd logo"/></p>
 <h1 align="center">Simple Manga Downloader</h1>
 <p align="center">
 A tool to search and automatically download manga from web sites, with support for several sites and languages.
@@ -30,7 +30,8 @@ To run this program you need to have **python3** installed in your machine, for 
 To install **smd** open your terminal and execute the following command:
 > `pip install smd`
 
-For help installing packages look [here](https://packaging.python.org/tutorials/installing-packages/).
+Now the command `smd` will be available in your terminal.
+If you have troubles with the installation look [here](https://packaging.python.org/tutorials/installing-packages/) for help installing packages.
 
 ## Examples
 To select site and manga interactively just run:

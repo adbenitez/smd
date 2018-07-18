@@ -1,0 +1,24 @@
+{
+  "log": {
+    "version": "1.1",
+    "creator": {
+      "name": "Firefox",
+      "version": "60.0.2"
+    },
+    "browser": {
+      "name": "Firefox",
+      "version": "60.0.2"
+    },
+    "pages": [
+      {
+        "startedDateTime": "NaN-NaN-NaNTNaN:NaN:NaN.NaN+NaN:NaN",
+        "id": "page_2",
+        "title": "Private Browsing",
+        "pageTimings": {
+          "onContentLoad": 638,
+          "onLoad": 692
+        }
+      }
+    ]
+  }
+}
