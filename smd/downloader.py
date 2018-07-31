@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 <<<<<<< HEAD
+<<<<<<< HEAD
 # Use of this source code is governed by GPL3 license that can be
 # found in the LICENSE file.
 '''
@@ -7,6 +8,8 @@ This module provides the downloaders able to grab content from the
 supported sites
 '''
 =======
+=======
+>>>>>>> 1.6.0
 """
 .. module:: downloader
 
@@ -16,6 +19,9 @@ supported sites.
 .. moduleauthor:: Asiel Díaz Benítez <asieldbenitez@gmail.com>
 
 """
+<<<<<<< HEAD
+>>>>>>> 1.6.0
+=======
 >>>>>>> 1.6.0
 
 from abc import ABC, abstractmethod
@@ -26,6 +32,7 @@ import logging
 import logging.handlers
 import os
 <<<<<<< HEAD
+<<<<<<< HEAD
 from random import choice
 import re
 import sys
@@ -34,10 +41,15 @@ from urllib.request import build_opener, HTTPCookieProcessor, Request
 import re
 from urllib.request import build_opener, HTTPCookieProcessor, Request, URLError
 >>>>>>> 1.6.0
+=======
+import re
+from urllib.request import build_opener, HTTPCookieProcessor, Request, URLError
+>>>>>>> 1.6.0
 from urllib.parse import urlencode, quote_plus
 
 from bs4 import BeautifulSoup
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 USER_AGENT = choice([
     'Mozilla/5.0 (X11; Ubuntu; Linux i686 on x86_64; rv:60.0) Gecko/20100101 '
@@ -63,6 +75,16 @@ class Downloader(ABC):
     """
     Abstract class base of all manga downloaders.
     """
+=======
+from smd.utils import (ConsoleFilter, Chapter, get_text, select_chapters,
+                       select_manga, Manga, mkdir, USER_AGENT)
+
+
+class Downloader(ABC):
+
+    """Abstract class base of all manga downloaders."""
+
+>>>>>>> 1.6.0
 =======
 from smd.utils import (ConsoleFilter, Chapter, get_text, select_chapters,
                        select_manga, Manga, mkdir, USER_AGENT)
@@ -148,12 +170,15 @@ class Downloader(ABC):
         return image_url
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     def download(self, manga, chapter_selectors=None):
         '''
         Searches for `manga` and, if found, downloads chapters given in
         `chapter_selectors` are downloaded.
         '''
 =======
+=======
+>>>>>>> 1.6.0
     def update(self, manga):
         """Downloads new available chapters of the given manga.
 
@@ -237,12 +262,16 @@ class Downloader(ABC):
         :return: ``True`` if the manga was downloaded successfully, ``False``
                  otherwise.
         """
+<<<<<<< HEAD
+>>>>>>> 1.6.0
+=======
 >>>>>>> 1.6.0
         success = True
         try:
             self.logger.info(_("Searching for '{}' ...").format(manga))
             mangas = self.search(manga)
             if mangas:
+<<<<<<< HEAD
 <<<<<<< HEAD
                 manga, url = Downloader.select_manga(mangas)
             else:
@@ -279,6 +308,17 @@ class Downloader(ABC):
             self.logger.info(_("Getting chapters list of '{}' ...")
                              .format(manga))
             chapters = self.get_chapters(url)
+=======
+                title, url = select_manga(mangas)
+            else:
+                return False
+            manga = Manga(mkdir(os.path.abspath('.'), title),
+                          title, url, self.name)
+            manga.save_data()
+            self.logger.info(_("Getting chapters list of '{}' ...")
+                             .format(manga))
+            chapters = self.get_chapters(url)
+>>>>>>> 1.6.0
             self.logger.info(_("Found {} chapters for '{}'")
                              .format(len(chapters), manga))
             chapters = select_chapters(chapters, chapter_selectors)
@@ -292,6 +332,9 @@ class Downloader(ABC):
             self.logger.info(_("Downloading '{}':").format(manga))
             for chap in chapters:
                 self._download_chapter(chap)
+<<<<<<< HEAD
+>>>>>>> 1.6.0
+=======
 >>>>>>> 1.6.0
         except KeyboardInterrupt:
             raise
@@ -302,8 +345,11 @@ class Downloader(ABC):
 
     def get_json(self, url, data=None, method='GET'):
 <<<<<<< HEAD
+<<<<<<< HEAD
         return json.loads(self.get(url, data=data, method=method, xhr=True))
 =======
+=======
+>>>>>>> 1.6.0
         """Request json data from the given url.
 
         :param str url: the URL to request.
@@ -313,6 +359,9 @@ class Downloader(ABC):
         """
         return json.loads(self.get(url, data=data, method=method,
                                    xhr=True))
+<<<<<<< HEAD
+>>>>>>> 1.6.0
+=======
 >>>>>>> 1.6.0
 
     def download_img(self, url, name):
@@ -336,7 +385,10 @@ class Downloader(ABC):
 
     def get(self, url, data=None, method='GET', xhr=False, decode=True):
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> 1.6.0
         """Retrieves data from given URL.
 
         :param str url: the URL to retrieve.
@@ -349,6 +401,9 @@ class Downloader(ABC):
         :raises ConnectionResetError: if the connection is reset more than
                                       five times.
         """
+<<<<<<< HEAD
+>>>>>>> 1.6.0
+=======
 >>>>>>> 1.6.0
         if data is None:
             data = {}
@@ -386,6 +441,7 @@ class Downloader(ABC):
 
     def _init_logger(self):
 <<<<<<< HEAD
+<<<<<<< HEAD
         self.logger = logging.Logger(self.name)
         self.logger.parent = None
         fh = logging.handlers.RotatingFileHandler(Downloader.logfile,
@@ -396,11 +452,17 @@ class Downloader(ABC):
         """Initializes the downloader is logger."""
         self.logger = logging.Logger(self.name)
         self.logger.parent = None
+=======
+        """Initializes the downloader is logger."""
+        self.logger = logging.Logger(self.name)
+        self.logger.parent = None
+>>>>>>> 1.6.0
         fhandler = logging.handlers.RotatingFileHandler(Downloader.logfile,
                                                         backupCount=1,
                                                         maxBytes=2000000)
         fhandler.setLevel(logging.DEBUG)
         chandler = logging.StreamHandler()
+<<<<<<< HEAD
 >>>>>>> 1.6.0
         if Downloader.verbose:
             chandler.setLevel(logging.DEBUG)
@@ -412,11 +474,19 @@ class Downloader(ABC):
             chandler.addFilter(ConsoleFilter())
             chandler.setLevel(logging.INFO)
 >>>>>>> 1.6.0
+=======
+        if Downloader.verbose:
+            chandler.setLevel(logging.DEBUG)
+        else:
+            chandler.addFilter(ConsoleFilter())
+            chandler.setLevel(logging.INFO)
+>>>>>>> 1.6.0
         formatter = logging.Formatter('%(asctime)s - %(name)s - '
                                       '%(levelname)s - %(message)s')
         fhandler.setFormatter(formatter)
         formatter = logging.Formatter('[%(name)s] - '
                                       '%(levelname)s - %(message)s')
+<<<<<<< HEAD
 <<<<<<< HEAD
         ch.setFormatter(formatter)
         self.logger.addHandler(fh)  # order is important because ConsoleFilter
@@ -517,10 +587,15 @@ class Downloader(ABC):
     def get_text(tag):
         return tag.get_text().replace('\n', ' ').strip()
 =======
+=======
+>>>>>>> 1.6.0
         chandler.setFormatter(formatter)
         # order is important because ConsoleFilter:
         self.logger.addHandler(fhandler)
         self.logger.addHandler(chandler)
+<<<<<<< HEAD
+>>>>>>> 1.6.0
+=======
 >>>>>>> 1.6.0
 
 
@@ -546,7 +621,11 @@ class NineManga(Downloader):
                 soup = BeautifulSoup(self.get(page['href']), 'html.parser')
                 direlist = soup.find('ul', class_='direlist')
 <<<<<<< HEAD
+<<<<<<< HEAD
                 results.extend((self.get_text(a), a['href']) for a in
+=======
+                results.extend((get_text(a), a['href']) for a in
+>>>>>>> 1.6.0
 =======
                 results.extend((get_text(a), a['href']) for a in
 >>>>>>> 1.6.0
@@ -736,7 +815,11 @@ class MangaNelo(Downloader):
         url = self.site_url+'/home_json_search/'
         data = self.get_json(url, data, method='POST')
 <<<<<<< HEAD
+<<<<<<< HEAD
         return [(self.get_text(BeautifulSoup(result['name'], 'html.parser')),
+=======
+        return [(get_text(BeautifulSoup(result['name'], 'html.parser')),
+>>>>>>> 1.6.0
 =======
         return [(get_text(BeautifulSoup(result['name'], 'html.parser')),
 >>>>>>> 1.6.0

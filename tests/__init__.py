@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 import os
 import sys
 
@@ -13,6 +14,8 @@ def empty_dir(path):
         for d in dirs:
             os.rmdir(os.path.join(root, d))
 =======
+=======
+>>>>>>> 1.6.0
 # -*- coding: utf-8 -*-
 '''
 .. module:: tests
@@ -28,4 +31,7 @@ Tests for the ``smd`` application.
 # sys.path.insert(0, os.path.abspath(
 #     os.path.join(os.path.dirname(__file__), '..')))
 # import smd
+<<<<<<< HEAD
+>>>>>>> 1.6.0
+=======
 >>>>>>> 1.6.0

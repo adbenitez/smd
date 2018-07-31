@@ -8,6 +8,7 @@ import re
 from setuptools import find_packages, setup
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 setuptools.setup(
     name="smd",
     # WARNING: careful with this, if smd imports stuff from install_requires:
@@ -19,6 +20,8 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://adbenitez.github.io/smd",
 =======
+=======
+>>>>>>> 1.6.0
 with open('README.rst', 'rt', encoding='utf8') as fh:
     README = fh.read()
 
@@ -35,12 +38,16 @@ setup(
     long_description=README,
     long_description_content_type='text/x-rst',
     url='https://adbenitez.github.io/smd',
+<<<<<<< HEAD
+>>>>>>> 1.6.0
+=======
 >>>>>>> 1.6.0
     classifiers=(
         # How mature is this project? Common values are
         #   3 - Alpha
         #   4 - Beta
         #   5 - Production/Stable
+<<<<<<< HEAD
 <<<<<<< HEAD
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: End Users/Desktop",
@@ -58,6 +65,24 @@ setup(
     keywords="manga downloader web scraping crawler spider internet desktop app",
     project_urls={
         # 'Documentation': 'comming soon',
+=======
+        'Development Status :: 5 - Production/Stable',
+        'Intended Audience :: End Users/Desktop',
+        'Environment :: Console',
+        'Environment :: Web Environment',
+        'Programming Language :: Python :: 3',
+        'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
+        'Natural Language :: English',
+        'Operating System :: OS Independent',
+        'Topic :: Games/Entertainment',
+        'Topic :: Internet',
+        'Topic :: Internet :: WWW/HTTP',
+        'Topic :: Utilities'
+    ),
+    keywords='download manga downloader web scraping crawler spider internet desktop app offline reading',
+    project_urls={
+        'Documentation': 'http://smd.readthedocs.io',
+>>>>>>> 1.6.0
 =======
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: End Users/Desktop',
