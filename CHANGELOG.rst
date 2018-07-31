@@ -6,7 +6,7 @@ Simple Manga Downloader Changelog
 Version 1.6.0
 -------------
 
-Released on August ??, 2018
+Released on July 31, 2018
 
 * **New:** Now ``smd`` is *smarter*, it keeps metadata about the mangas and remember download status, downloading only missing or incomplete chapters, also useful to download new chapters from ongoing mangas.
 * **New:** Added option ``--update`` (to get new chapters for ongoing mangas).
