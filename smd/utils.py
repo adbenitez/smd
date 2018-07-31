@@ -404,8 +404,8 @@ def select_chapters(chapters, selectors):
 
     :param chapters: a list of chapters (:class:`~smd.util.Chapter`).
     :param str selectors: a string of comma-separated selectors.
-    :return: a set of selected chapters.
-    :rtype: set
+    :return: a list of selected chapters.
+    :rtype: list
     """
     if not selectors:
         return chapters
@@ -449,7 +449,7 @@ def select_chapters(chapters, selectors):
                 .format(selector))
     if not chaps:
         chaps = set(chapters)
-    return chaps - ignored_chaps
+    return sorted(chaps - ignored_chaps, key=lambda c: chapters.index(c))
 
 
 def select_downloader(downloaders):

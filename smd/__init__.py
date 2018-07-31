@@ -15,7 +15,7 @@ import sys
 import smd.utils as utils
 
 __author__ = 'adbenitez'
-__version__ = '1.6.0'
+__version__ = '1.6.1'
 
 conf_dir = utils.create_config_folder()
 config = utils.Config(os.path.join(conf_dir, 'smd.cfg'))
