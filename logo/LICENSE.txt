@@ -1,0 +1,9 @@
+logo.png:
+    This file is licensed by DLE under the Creative Commons Attribution-Share
+    Alike 4.0 International license, for more info see
+    https://commons.wikimedia.org/wiki/File:Panpaka_and_Punyan.png
+
+all other images:
+    Are modifications of `logo.png` and are licensed by me (Asiel Díaz Benítez)
+    under the same license as `logo.png` (Creative Commons Attribution-Share
+    Alike 4.0 International license)

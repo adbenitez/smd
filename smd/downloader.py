@@ -1,10 +1,22 @@
 # -*- coding: utf-8 -*-
+<<<<<<< HEAD
 # Use of this source code is governed by GPL3 license that can be
 # found in the LICENSE file.
 '''
 This module provides the downloaders able to grab content from the
 supported sites
 '''
+=======
+"""
+.. module:: downloader
+
+This module provides the downloaders able to grab content from the
+supported sites.
+
+.. moduleauthor:: Asiel Díaz Benítez <asieldbenitez@gmail.com>
+
+"""
+>>>>>>> 1.6.0
 
 from abc import ABC, abstractmethod
 from http.cookiejar import MozillaCookieJar
@@ -13,14 +25,20 @@ import json
 import logging
 import logging.handlers
 import os
+<<<<<<< HEAD
 from random import choice
 import re
 import sys
 from urllib.request import build_opener, HTTPCookieProcessor, Request
+=======
+import re
+from urllib.request import build_opener, HTTPCookieProcessor, Request, URLError
+>>>>>>> 1.6.0
 from urllib.parse import urlencode, quote_plus
 
 from bs4 import BeautifulSoup
 
+<<<<<<< HEAD
 USER_AGENT = choice([
     'Mozilla/5.0 (X11; Ubuntu; Linux i686 on x86_64; rv:60.0) Gecko/20100101 '
     'Firefox/60.0',
@@ -45,10 +63,26 @@ class Downloader(ABC):
     """
     Abstract class base of all manga downloaders.
     """
+=======
+from smd.utils import (ConsoleFilter, Chapter, get_text, select_chapters,
+                       select_manga, Manga, mkdir, USER_AGENT)
+
+
+class Downloader(ABC):
+
+    """Abstract class base of all manga downloaders."""
+
+>>>>>>> 1.6.0
     logfile = 'smd.log'
     verbose = False
 
     def __init__(self, name, lang, site_url):
+        """
+        :param str name: the name of the downloader.
+        :param str lang: the language of the downloader (ISO 639-1 code) or *
+                         if the site have manga in multiple languages.
+        :param str site_url: the URL of the web site of this downloader.
+        """
         self.name = name
         self.lang = lang
         self.site_url = site_url
@@ -68,48 +102,148 @@ class Downloader(ABC):
     def __str__(self):
         return self.name
 
+    def __repr__(self):
+        return '({}, {}, {})'.format(self.name, self.lang, self.site_url)
+
     @abstractmethod
     def search(self, manga):
-        '''
-        Receives a frase or manga title to search and returns a list of tuples
-        each one with the tile and URL of the manga that matched the frase.
-        '''
+        """Searches for mangas matching the given text.
+
+        :param str manga: a frase or manga title to search.
+        :return: a list of tuples each one with two strings: the title and
+                 URL of a matched manga.
+        """
         pass
 
     @abstractmethod
     def get_chapters(self, manga_url):
-        '''
-        Receives the URL of a manga and returns a list of tuples each one with
-        the chapter title and URL.
-        '''
+        """Extracts the manga chapters from the given manga URL.
+
+        :param str manga_url: the URL of a manga.
+        :return: a list of tuples each one with two strings: the title and
+                 URL of a chapter from the given manga.
+        """
         pass
 
     @abstractmethod
     def get_images(self, chapter_url):
-        '''
-        Receives the chapter URL and returns the list of images for the given
-        chapter, or a list of URL where the images can be found using
-        `get_image`.
-        '''
+        """Extracts the images links from a chapter URL.
+
+        :param str chapter_url: the URL of a manga chapter.
+        :return: list of image URLs for the given chapter, or a list of
+                 URLs where the images can be extracted using
+                 :func:`~smd.downloader.Downloader.get_image`.
+        """
         pass
 
-    def get_image(self, image_url):
-        '''
-        When `get_images` doesn't return the images URLs this method must be
-        overridden to get the image URL from the given URL.
-        '''
+    @classmethod
+    def get_image(cls, image_url):
+        """If needed, extracts the image link from the given URL.
+
+        :param str image_url: the image URL or an URL to a page where the image
+                              link can be extracted.
+        :return: the image URL.
+        :rtype: str
+        """
         return image_url
 
+<<<<<<< HEAD
     def download(self, manga, chapter_selectors=None):
         '''
         Searches for `manga` and, if found, downloads chapters given in
         `chapter_selectors` are downloaded.
         '''
+=======
+    def update(self, manga):
+        """Downloads new available chapters of the given manga.
+
+        :param manga: the manga to update.
+        :type manga: :class:`~smd.utils.Manga`
+        :return: the number of updated mangas.
+        :rtype: int
+        """
+        self.logger.info(_("Looking for new chapters of '{}' ...")
+                         .format(manga))
+        all_chaps = self.get_chapters(manga['url'])
+        old_chaps = [chap['title'] for chap in manga.chapters_iter()]
+        new_chaps = [Chapter(mkdir(manga.path, title), title, url)
+                     for title, url in all_chaps if title not in old_chaps]
+        self.logger.info(_("Found {} new chapters for '{}'")
+                         .format(len(new_chaps), manga))
+        for chap in new_chaps:
+            self._download_chapter(chap)
+        updates = len(new_chaps)
+        if updates == 0:
+            self.logger.info(_("No new chapters found for '{}'.")
+                             .format(manga))
+        return updates
+
+    def resume(self, manga):
+        """Continues with the (unfinished) download of the given manga.
+
+        :param manga: the manga to continue downloading.
+        :type manga: :class:`~smd.utils.Manga`
+        :return: the number of resumed mangas.
+        :rtype: int
+        """
+        self.logger.info(_("Resuming download of '{}' ...").format(manga))
+        downloads = 0
+        for chap in manga.chapters_iter():
+            if chap['current'] < len(chap['images']):
+                self._download_chapter(chap)
+                downloads += 1
+        if downloads == 0:
+            self.logger.warning(_("No pending chapters found for '{}'.")
+                                .format(manga))
+        return downloads
+
+    def _download_chapter(self, chapter):
+        """Downloads the given chapter only if it is not downloaded already,
+        if the chapter was previously interrupted the download is resumed.
+
+        :param chapter: the chapter to download.
+        :type chapter: :class:`~smd.utils.Chapter`
+        """
+        if chapter['current'] == len(chapter['images']):
+            self.logger.info(_("Skipping chapter '{}': Already downloaded.")
+                             .format(chapter))
+            return
+        elif chapter['current'] == -1:
+            self.logger.info(_("Getting images list for chapter '{}' ...")
+                             .format(chapter))
+            chapter['images'] = self.get_images(chapter['url'])
+            chapter['current'] = 0
+            chapter.save_data()
+        img_count = len(chapter['images'])
+        dcount = len(str(img_count))
+        for url in chapter['images'][chapter['current']:]:
+            current = chapter['current']+1
+            print('\r'+_("[{}] Downloading '{}' (image: {}/{})").format(
+                self.name, chapter, current, img_count), end='')
+            name = os.path.join(chapter.path, str(current).zfill(dcount))
+            self.download_img(self.get_image(url), name)
+            chapter['current'] = current
+            chapter.save_data()
+        if img_count > 0:
+            print()
+
+    def download(self, manga, chapter_selectors=None):
+        """Searches for the given manga and, if found, chapters specified in
+        ``chapter_selectors`` are downloaded.
+
+        :param str manga: the manga to download.
+        :param str chapter_selectors: a string specifying the chapters to
+                                      download.
+        :return: ``True`` if the manga was downloaded successfully, ``False``
+                 otherwise.
+        """
+>>>>>>> 1.6.0
         success = True
         try:
-            self.logger.info("Searching for '%s' ...", manga)
+            self.logger.info(_("Searching for '{}' ...").format(manga))
             mangas = self.search(manga)
             if mangas:
+<<<<<<< HEAD
                 manga, url = Downloader.select_manga(mangas)
             else:
                 return False
@@ -135,18 +269,63 @@ class Downloader(ABC):
                     self.download_img(self.get_image(url), name)
                 if img_count > 0:
                     print()
+=======
+                title, url = select_manga(mangas)
+            else:
+                return False
+            manga = Manga(mkdir(os.path.abspath('.'), title),
+                          title, url, self.name)
+            manga.save_data()
+            self.logger.info(_("Getting chapters list of '{}' ...")
+                             .format(manga))
+            chapters = self.get_chapters(url)
+            self.logger.info(_("Found {} chapters for '{}'")
+                             .format(len(chapters), manga))
+            chapters = select_chapters(chapters, chapter_selectors)
+            self.logger.info(_("Selected {} chapters to download")
+                             .format(len(chapters)))
+            self.logger.debug(_('Creating chapter folders...'))
+            chapters = [Chapter(mkdir(manga.path, title), title, url)
+                        for title, url in chapters]
+            for chap in chapters:
+                chap.save_data()
+            self.logger.info(_("Downloading '{}':").format(manga))
+            for chap in chapters:
+                self._download_chapter(chap)
+>>>>>>> 1.6.0
         except KeyboardInterrupt:
             raise
-        except Exception as ex:
-            # exec_type, exc_obj, exc_tb = sys.exc_info()
+        except URLError as ex:
             self.logger.exception(ex)
             success = False
         return success
 
     def get_json(self, url, data=None, method='GET'):
+<<<<<<< HEAD
         return json.loads(self.get(url, data=data, method=method, xhr=True))
+=======
+        """Request json data from the given url.
+
+        :param str url: the URL to request.
+        :param dict data: the data to send in the request.
+        :param str method: the method to use for the request.
+        :return: the response data object.
+        """
+        return json.loads(self.get(url, data=data, method=method,
+                                   xhr=True))
+>>>>>>> 1.6.0
 
     def download_img(self, url, name):
+        """Receives an image URL and a filename (without a file extension)
+        and downloads the image, detects image format and save it to the
+        given filename plus the proper extension.
+
+        :param str url: the URL of the image.
+        :param str name: the name to use for the saved image (without file
+                         extension)
+        :return: the file name with file extension  of the downloaded image.
+        :rtype: str
+        """
         img = self.get(url, decode=False)
         ext = imghdr.what("", h=img)
         ext = '' if ext is None else '.'+ext
@@ -156,18 +335,35 @@ class Downloader(ABC):
         return file_name
 
     def get(self, url, data=None, method='GET', xhr=False, decode=True):
+<<<<<<< HEAD
+=======
+        """Retrieves data from given URL.
+
+        :param str url: the URL to retrieve.
+        :param dict data: the data to send with the request.
+        :param str method: the method to use to request the URL (POST/GET).
+        :param bool xhr: if ``True`` set the header 'X-Requested-With' to
+                         'XMLHttpRequest'
+        :param bool decode: if ``True`` decode the response data.
+        :return: the response data.
+        :raises ConnectionResetError: if the connection is reset more than
+                                      five times.
+        """
+>>>>>>> 1.6.0
         if data is None:
             data = {}
         method = method.upper()
-        data = urlencode(data)
+        encoded_data = urlencode(data)
+        del data
         if method == 'GET':
-            if data:
-                url = url+'?'+data
-            data = None
+            if encoded_data:
+                url = url+'?'+encoded_data
+            encoded_data = None
         elif method == 'POST':
-            data = data.encode('ascii')
+            encoded_data = encoded_data.encode('ascii')
         else:
-            raise Exception("Only GET and POST methods are implemented.")
+            raise Exception(
+                _("Only 'GET' and 'POST' methods are implemented."))
         if xhr:
             headers = {'X-Requested-With': 'XMLHttpRequest'}
         else:
@@ -175,8 +371,9 @@ class Downloader(ABC):
         errors = 0
         while True:
             try:
-                self.logger.debug('Downloading: %s', url)
-                with self.url_opener.open(Request(url, data, headers)) as resp:
+                self.logger.debug(_('Downloading: {}').format(url))
+                req = Request(url, encoded_data, headers)
+                with self.url_opener.open(req) as resp:
                     if decode:
                         return resp.read().decode(errors='ignore')
                     else:
@@ -188,22 +385,39 @@ class Downloader(ABC):
                 self.logger.debug(err)
 
     def _init_logger(self):
+<<<<<<< HEAD
         self.logger = logging.Logger(self.name)
         self.logger.parent = None
         fh = logging.handlers.RotatingFileHandler(Downloader.logfile,
                                                   maxBytes=10000000)
         fh.setLevel(logging.DEBUG)
         ch = logging.StreamHandler()
+=======
+        """Initializes the downloader is logger."""
+        self.logger = logging.Logger(self.name)
+        self.logger.parent = None
+        fhandler = logging.handlers.RotatingFileHandler(Downloader.logfile,
+                                                        backupCount=1,
+                                                        maxBytes=2000000)
+        fhandler.setLevel(logging.DEBUG)
+        chandler = logging.StreamHandler()
+>>>>>>> 1.6.0
         if Downloader.verbose:
-            ch.setLevel(logging.DEBUG)
+            chandler.setLevel(logging.DEBUG)
         else:
+<<<<<<< HEAD
             ch.addFilter(ConsoleFilter())
             ch.setLevel(logging.INFO)
+=======
+            chandler.addFilter(ConsoleFilter())
+            chandler.setLevel(logging.INFO)
+>>>>>>> 1.6.0
         formatter = logging.Formatter('%(asctime)s - %(name)s - '
                                       '%(levelname)s - %(message)s')
-        fh.setFormatter(formatter)
+        fhandler.setFormatter(formatter)
         formatter = logging.Formatter('[%(name)s] - '
                                       '%(levelname)s - %(message)s')
+<<<<<<< HEAD
         ch.setFormatter(formatter)
         self.logger.addHandler(fh)  # order is important because ConsoleFilter
         self.logger.addHandler(ch)
@@ -302,12 +516,18 @@ class Downloader(ABC):
     @staticmethod
     def get_text(tag):
         return tag.get_text().replace('\n', ' ').strip()
+=======
+        chandler.setFormatter(formatter)
+        # order is important because ConsoleFilter:
+        self.logger.addHandler(fhandler)
+        self.logger.addHandler(chandler)
+>>>>>>> 1.6.0
 
 
 class NineManga(Downloader):
-    """
-    Downloads manga from *.ninemanga.com
-    """
+
+    """Downloads manga from ninemanga.com."""
+
     def __init__(self, site):
         lang = 'pt' if site == 'br' else site
         Downloader.__init__(self, 'ninemanga-'+site, lang,
@@ -317,7 +537,7 @@ class NineManga(Downloader):
         url = self.site_url+"/search/"
         soup = BeautifulSoup(self.get(url, {'wd': manga}), 'html.parser')
         direlist = soup.find('ul', class_='direlist')
-        results = [(self.get_text(a), a['href'])
+        results = [(get_text(a), a['href'])
                    for a in direlist.find_all('a', class_='bookname')]
         pagelist = soup.find('ul', class_='pagelist')
         if pagelist:
@@ -325,7 +545,11 @@ class NineManga(Downloader):
             for page in pagelist.find_all('a')[1:-1]:
                 soup = BeautifulSoup(self.get(page['href']), 'html.parser')
                 direlist = soup.find('ul', class_='direlist')
+<<<<<<< HEAD
                 results.extend((self.get_text(a), a['href']) for a in
+=======
+                results.extend((get_text(a), a['href']) for a in
+>>>>>>> 1.6.0
                                direlist.find_all('a', class_='bookname'))
         return results
 
@@ -352,9 +576,9 @@ class NineManga(Downloader):
 
 
 class HeavenManga(Downloader):
-    """
-    Downloads manga from heavenmanga.com
-    """
+
+    """Downloads manga from heavenmanga.com."""
+
     def __init__(self):
         Downloader.__init__(self, 'heavenmanga', 'es',
                             'http://heavenmanga.com')
@@ -365,7 +589,7 @@ class HeavenManga(Downloader):
         # page restriction: len(manga) must to be >= 4
         soup = BeautifulSoup(self.get(url), 'html.parser')
         divs = soup.find_all('div', class_='cont_manga')
-        return [(self.get_text(div.a.header), div.a['href'])
+        return [(get_text(div.a.header), div.a['href'])
                 for div in divs]
 
     def get_chapters(self, manga_url):
@@ -388,9 +612,9 @@ class HeavenManga(Downloader):
 
 
 class MangaReader(Downloader):
-    """
-    Downloads manga from www.mangareader.net
-    """
+
+    """Downloads manga from www.mangareader.net."""
+
     def __init__(self):
         Downloader.__init__(self, 'mangareader', 'en',
                             'https://www.mangareader.net')
@@ -408,7 +632,7 @@ class MangaReader(Downloader):
 
     def get_chapters(self, manga_url):
         soup = BeautifulSoup(self.get(manga_url), 'html.parser')
-        chapters = [(self.get_text(a), self.site_url + a['href'])
+        chapters = [(get_text(a), self.site_url + a['href'])
                     for a in soup.find('table', id='listing').find_all('a')]
         # don't need to use `chapters.reverse()` here
         return chapters
@@ -425,9 +649,9 @@ class MangaReader(Downloader):
 
 
 class MangaAll(Downloader):
-    """
-    Downloads manga from mangaall.net
-    """
+
+    """Downloads manga from mangaall.net."""
+
     def __init__(self):
         Downloader.__init__(self, 'mangaall', 'en', 'http://mangaall.net')
         self.regex = re.compile(r"var _page_total = '(?P<total>[0-9]+)';")
@@ -463,9 +687,9 @@ class MangaAll(Downloader):
 
 
 class MangaDoor(Downloader):
-    """
-    Downloads manga from mangadoor.com
-    """
+
+    """Downloads manga from mangadoor.com."""
+
     def __init__(self):
         Downloader.__init__(self, 'mangadoor', 'es', 'http://mangadoor.com')
 
@@ -478,7 +702,7 @@ class MangaDoor(Downloader):
 
     def get_chapters(self, manga_url):
         soup = BeautifulSoup(self.get(manga_url), 'html.parser')
-        chapters = [(self.get_text(a), a['href'])
+        chapters = [(get_text(a), a['href'])
                     for a in soup.find('ul', class_='chapters').find_all('a')]
         chapters.reverse()
         return chapters
@@ -494,9 +718,9 @@ class MangaDoor(Downloader):
 
 
 class MangaNelo(Downloader):
-    '''
-    Downloads manga from manganelo.com
-    '''
+
+    """Downloads manga from manganelo.com."""
+
     def __init__(self):
         Downloader.__init__(self, 'manganelo', 'en', 'https://manganelo.com')
 
@@ -511,7 +735,11 @@ class MangaNelo(Downloader):
         data = {'search_style': 'tentruyen', 'searchword': query_str}
         url = self.site_url+'/home_json_search/'
         data = self.get_json(url, data, method='POST')
+<<<<<<< HEAD
         return [(self.get_text(BeautifulSoup(result['name'], 'html.parser')),
+=======
+        return [(get_text(BeautifulSoup(result['name'], 'html.parser')),
+>>>>>>> 1.6.0
                  self.site_url+'/manga/'+result['nameunsigned'])
                 for result in data]
 
@@ -519,10 +747,10 @@ class MangaNelo(Downloader):
         soup = BeautifulSoup(self.get(manga_url), 'html.parser')
         div = soup.find('div', class_='chapter-list')
         chapters = []
-        for a in div.find_all('a'):
-            if a['href'].startswith('/'):
-                a['href'] = 'https:'+a['href']
-            chapters.append((self.get_text(a), a['href']))
+        for anchor in div.find_all('a'):
+            if anchor['href'].startswith('/'):
+                anchor['href'] = 'https:'+anchor['href']
+            chapters.append((get_text(anchor), anchor['href']))
         chapters.reverse()
         return chapters
 
@@ -533,9 +761,9 @@ class MangaNelo(Downloader):
 
 
 class MangaHere(Downloader):
-    """
-    Downloads manga from www.mangahere.cc
-    """
+
+    """Downloads manga from www.mangahere.cc."""
+
     def __init__(self):
         Downloader.__init__(self, 'mangahere', 'en', 'http://www.mangahere.cc')
 
@@ -549,7 +777,7 @@ class MangaHere(Downloader):
     def get_chapters(self, manga_url):
         soup = BeautifulSoup(self.get(manga_url), 'html.parser')
         ulist = soup.find('div', class_='detail_list').ul
-        chapters = [(self.get_text(a), 'http:'+a['href'])
+        chapters = [(get_text(a), 'http:'+a['href'])
                     for a in ulist.find_all('a')]
         chapters.reverse()
         return chapters
@@ -558,8 +786,20 @@ class MangaHere(Downloader):
         soup = BeautifulSoup(self.get(chapter_url), 'html.parser')
         opts = soup.find('select', class_='wid60').find_all('option')
         return ['http:'+opt['value']
-                for opt in opts if self.get_text(opt) != 'Featured']
+                for opt in opts if get_text(opt) != 'Featured']
 
     def get_image(self, image_url):
         soup = BeautifulSoup(self.get(image_url), 'html.parser')
         return soup.find('img', id='image')['src']
+
+
+def get_downloaders():
+    """Creates a list with instances of all supported downloaders.
+
+    :return: the list of all supported downloaders.
+    :rtype: list of :class:`Downloader`
+    """
+    return [NineManga('en'), NineManga('es'), NineManga('ru'),
+            NineManga('de'), NineManga('it'), NineManga('br'),
+            HeavenManga(), MangaReader(), MangaAll(),
+            MangaDoor(), MangaNelo(), MangaHere()]
