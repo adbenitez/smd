@@ -47,7 +47,7 @@ setup(
         'Donate': 'http://liberapay.com/adbenitez',
         'Say Thanks!': 'http://mastodon.social/@adbenitez',
         'Source': 'https://github.com/adbenitez/smd',
-        'Tracker': 'https://github.com/adbenitez/smd/issues',
+        'Tracker': 'https://github.com/adbenitez/smd/issues'
     },
     packages=find_packages(exclude=('tests*', 'docs')),
     install_requires=['beautifulsoup4'],
@@ -57,8 +57,5 @@ setup(
             'smd=smd:main',
         ],
     },
-    include_package_data=True,
-    package_data={
-        'smd': ['locale']
-    }
+    include_package_data=True
 )
