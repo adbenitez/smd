@@ -1,15 +1,4 @@
 # -*- coding: utf-8 -*-
-<<<<<<< HEAD
-<<<<<<< HEAD
-# Use of this source code is governed by GPL3 license that can be
-# found in the LICENSE file.
-'''
-This module provides the downloaders able to grab content from the
-supported sites
-'''
-=======
-=======
->>>>>>> 1.6.0
 """
 .. module:: downloader
 
@@ -19,10 +8,6 @@ supported sites.
 .. moduleauthor:: Asiel Díaz Benítez <asieldbenitez@gmail.com>
 
 """
-<<<<<<< HEAD
->>>>>>> 1.6.0
-=======
->>>>>>> 1.6.0
 
 from abc import ABC, abstractmethod
 from http.cookiejar import MozillaCookieJar
@@ -31,51 +16,12 @@ import json
 import logging
 import logging.handlers
 import os
-<<<<<<< HEAD
-<<<<<<< HEAD
-from random import choice
-import re
-import sys
-from urllib.request import build_opener, HTTPCookieProcessor, Request
-=======
 import re
 from urllib.request import build_opener, HTTPCookieProcessor, Request, URLError
->>>>>>> 1.6.0
-=======
-import re
-from urllib.request import build_opener, HTTPCookieProcessor, Request, URLError
->>>>>>> 1.6.0
 from urllib.parse import urlencode, quote_plus
 
 from bs4 import BeautifulSoup
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-USER_AGENT = choice([
-    'Mozilla/5.0 (X11; Ubuntu; Linux i686 on x86_64; rv:60.0) Gecko/20100101 '
-    'Firefox/60.0',
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:57.0) Gecko/20100101 '
-    'Firefox/57.0',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:10.0) Gecko/20100101 '
-    'Firefox/60.0'
-])
-
-
-class ConsoleFilter:
-    '''
-    A filter to avoid showing exceptions stack traces text in user is terminal.
-    '''
-    def filter(self, record):
-        record.exc_info = None
-        record.exc_text = None
-        return True
-
-
-class Downloader(ABC):
-    """
-    Abstract class base of all manga downloaders.
-    """
-=======
 from smd.utils import (ConsoleFilter, Chapter, get_text, select_chapters,
                        select_manga, Manga, mkdir, USER_AGENT)
 
@@ -84,17 +30,6 @@ class Downloader(ABC):
 
     """Abstract class base of all manga downloaders."""
 
->>>>>>> 1.6.0
-=======
-from smd.utils import (ConsoleFilter, Chapter, get_text, select_chapters,
-                       select_manga, Manga, mkdir, USER_AGENT)
-
-
-class Downloader(ABC):
-
-    """Abstract class base of all manga downloaders."""
-
->>>>>>> 1.6.0
     logfile = 'smd.log'
     verbose = False
 
@@ -169,16 +104,6 @@ class Downloader(ABC):
         """
         return image_url
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-    def download(self, manga, chapter_selectors=None):
-        '''
-        Searches for `manga` and, if found, downloads chapters given in
-        `chapter_selectors` are downloaded.
-        '''
-=======
-=======
->>>>>>> 1.6.0
     def update(self, manga):
         """Downloads new available chapters of the given manga.
 
@@ -262,43 +187,11 @@ class Downloader(ABC):
         :return: ``True`` if the manga was downloaded successfully, ``False``
                  otherwise.
         """
-<<<<<<< HEAD
->>>>>>> 1.6.0
-=======
->>>>>>> 1.6.0
         success = True
         try:
             self.logger.info(_("Searching for '{}' ...").format(manga))
             mangas = self.search(manga)
             if mangas:
-<<<<<<< HEAD
-<<<<<<< HEAD
-                manga, url = Downloader.select_manga(mangas)
-            else:
-                return False
-            manga_dir = self._mkdir(os.path.abspath('.'), manga)
-            self.logger.info("Getting chapters list of '%s' ...", manga)
-            chapters = self.get_chapters(url)
-            self.logger.info("Found %i chapters for '%s'",
-                             len(chapters), manga)
-            chapters = self._select_chapters(chapters, chapter_selectors)
-            self.logger.info("Selected %i chapters to download", len(chapters))
-            self.logger.info("Downloading '%s':", manga)
-            for chap_title, url in chapters:
-                chap_dir = self._mkdir(manga_dir, chap_title)
-                self.logger.info("Getting images list for chapter '%s' ...",
-                                 chap_title)
-                images = self.get_images(url)
-                img_count = len(images)
-                dcount = len(str(img_count))
-                for i, url in enumerate(images, 1):
-                    print("\r[{}] Downloading '{}' (image: {}/{})"
-                          .format(self.name, chap_title, i, img_count), end='')
-                    name = os.path.join(chap_dir, str(i).zfill(dcount))
-                    self.download_img(self.get_image(url), name)
-                if img_count > 0:
-                    print()
-=======
                 title, url = select_manga(mangas)
             else:
                 return False
@@ -308,17 +201,6 @@ class Downloader(ABC):
             self.logger.info(_("Getting chapters list of '{}' ...")
                              .format(manga))
             chapters = self.get_chapters(url)
-=======
-                title, url = select_manga(mangas)
-            else:
-                return False
-            manga = Manga(mkdir(os.path.abspath('.'), title),
-                          title, url, self.name)
-            manga.save_data()
-            self.logger.info(_("Getting chapters list of '{}' ...")
-                             .format(manga))
-            chapters = self.get_chapters(url)
->>>>>>> 1.6.0
             self.logger.info(_("Found {} chapters for '{}'")
                              .format(len(chapters), manga))
             chapters = select_chapters(chapters, chapter_selectors)
@@ -332,10 +214,6 @@ class Downloader(ABC):
             self.logger.info(_("Downloading '{}':").format(manga))
             for chap in chapters:
                 self._download_chapter(chap)
-<<<<<<< HEAD
->>>>>>> 1.6.0
-=======
->>>>>>> 1.6.0
         except KeyboardInterrupt:
             raise
         except URLError as ex:
@@ -344,12 +222,6 @@ class Downloader(ABC):
         return success
 
     def get_json(self, url, data=None, method='GET'):
-<<<<<<< HEAD
-<<<<<<< HEAD
-        return json.loads(self.get(url, data=data, method=method, xhr=True))
-=======
-=======
->>>>>>> 1.6.0
         """Request json data from the given url.
 
         :param str url: the URL to request.
@@ -359,10 +231,6 @@ class Downloader(ABC):
         """
         return json.loads(self.get(url, data=data, method=method,
                                    xhr=True))
-<<<<<<< HEAD
->>>>>>> 1.6.0
-=======
->>>>>>> 1.6.0
 
     def download_img(self, url, name):
         """Receives an image URL and a filename (without a file extension)
@@ -384,11 +252,6 @@ class Downloader(ABC):
         return file_name
 
     def get(self, url, data=None, method='GET', xhr=False, decode=True):
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
->>>>>>> 1.6.0
         """Retrieves data from given URL.
 
         :param str url: the URL to retrieve.
@@ -401,10 +264,6 @@ class Downloader(ABC):
         :raises ConnectionResetError: if the connection is reset more than
                                       five times.
         """
-<<<<<<< HEAD
->>>>>>> 1.6.0
-=======
->>>>>>> 1.6.0
         if data is None:
             data = {}
         method = method.upper()
@@ -440,163 +299,28 @@ class Downloader(ABC):
                 self.logger.debug(err)
 
     def _init_logger(self):
-<<<<<<< HEAD
-<<<<<<< HEAD
-        self.logger = logging.Logger(self.name)
-        self.logger.parent = None
-        fh = logging.handlers.RotatingFileHandler(Downloader.logfile,
-                                                  maxBytes=10000000)
-        fh.setLevel(logging.DEBUG)
-        ch = logging.StreamHandler()
-=======
         """Initializes the downloader is logger."""
         self.logger = logging.Logger(self.name)
         self.logger.parent = None
-=======
-        """Initializes the downloader is logger."""
-        self.logger = logging.Logger(self.name)
-        self.logger.parent = None
->>>>>>> 1.6.0
         fhandler = logging.handlers.RotatingFileHandler(Downloader.logfile,
                                                         backupCount=1,
                                                         maxBytes=2000000)
         fhandler.setLevel(logging.DEBUG)
         chandler = logging.StreamHandler()
-<<<<<<< HEAD
->>>>>>> 1.6.0
-        if Downloader.verbose:
-            chandler.setLevel(logging.DEBUG)
-        else:
-<<<<<<< HEAD
-            ch.addFilter(ConsoleFilter())
-            ch.setLevel(logging.INFO)
-=======
-            chandler.addFilter(ConsoleFilter())
-            chandler.setLevel(logging.INFO)
->>>>>>> 1.6.0
-=======
         if Downloader.verbose:
             chandler.setLevel(logging.DEBUG)
         else:
             chandler.addFilter(ConsoleFilter())
             chandler.setLevel(logging.INFO)
->>>>>>> 1.6.0
         formatter = logging.Formatter('%(asctime)s - %(name)s - '
                                       '%(levelname)s - %(message)s')
         fhandler.setFormatter(formatter)
         formatter = logging.Formatter('[%(name)s] - '
                                       '%(levelname)s - %(message)s')
-<<<<<<< HEAD
-<<<<<<< HEAD
-        ch.setFormatter(formatter)
-        self.logger.addHandler(fh)  # order is important because ConsoleFilter
-        self.logger.addHandler(ch)
-
-    def _select_chapters(self, chapters, selectors):
-        '''
-        chapters: a list of chapters.
-        selectors: a string of comma=separated selectors.
-
-        returns: a set of selected chapters.
-        '''
-        if not selectors:
-            return chapters
-        selectors = selectors.split(',')
-        chaps = set()
-        ignored_chaps = set()
-        for selector in selectors:
-            ignore = False
-            selector = selector.replace(' ', '')
-            s = selector[:]
-            if s.startswith('!'):
-                ignore = True
-                s = s[1:]
-            if set(s) - set('1234567890-:'):
-                self.logger.error("Invalid chapter selector: '%s'", selector)
-                sys.exit(1)
-            try:
-                s = s.split(':')
-                if s[0]:
-                    i = int(s[0])
-                    if i > 0:
-                        s[0] = str(i-1)
-                s = ':'.join(s)
-                ch = eval("chapters[{}]".format(s))
-                if type(ch) is list:
-                    if not ch:
-                        self.logger.error("Selector '%s' did not selected "
-                                          "any chapters.", selector)
-                        sys.exit(1)
-                    elif ignore:
-                        ignored_chaps.update(ch)
-                    else:
-                        chaps.update(ch)
-                else:
-                    if ignore:
-                        ignored_chaps.add(ch)
-                    else:
-                        chaps.add(ch)
-            except (SyntaxError, ValueError):
-                self.logger.error("Invalid chapter selector: '%s'", selector)
-                sys.exit(1)
-            except IndexError:
-                self.logger.error("Chapter selector out of range: '%s'",
-                                  selector)
-                sys.exit(1)
-        if not chaps:
-            chaps = set(chapters)
-        return chaps - ignored_chaps
-
-    @staticmethod
-    def select_manga(mangas):
-        print("Found:")
-        dcount = len(str(len(mangas)))
-        for i, manga in enumerate(mangas, 1):
-            print("{}. {}".format(str(i).rjust(dcount), manga[0]))
-        while True:
-            try:
-                i = int(input("Select manga to download [1-{}]:"
-                              .format(len(mangas)))) - 1
-                if i >= 0 and i < len(mangas):
-                    break
-            except ValueError:
-                pass
-            print("Invalid selection. Try again.")
-        return mangas[i]
-
-    def _mkdir(self, dirname, basename):
-        while True:
-            path = os.path.join(dirname, basename)
-            if os.path.exists(path):
-                if not os.path.isdir(path):
-                    self.logger.error("Can't create folder: File '%s' "
-                                      "already exists.", basename)
-                else:
-                    break
-            else:
-                try:
-                    os.mkdir(path)
-                    break
-                except FileNotFoundError:
-                    self.logger.error("Can't create folder '%s': "
-                                      "Invalid name.", basename)
-            basename = input("Enter a new folder name:")
-        return path
-
-    @staticmethod
-    def get_text(tag):
-        return tag.get_text().replace('\n', ' ').strip()
-=======
-=======
->>>>>>> 1.6.0
         chandler.setFormatter(formatter)
         # order is important because ConsoleFilter:
         self.logger.addHandler(fhandler)
         self.logger.addHandler(chandler)
-<<<<<<< HEAD
->>>>>>> 1.6.0
-=======
->>>>>>> 1.6.0
 
 
 class NineManga(Downloader):
@@ -620,15 +344,7 @@ class NineManga(Downloader):
             for page in pagelist.find_all('a')[1:-1]:
                 soup = BeautifulSoup(self.get(page['href']), 'html.parser')
                 direlist = soup.find('ul', class_='direlist')
-<<<<<<< HEAD
-<<<<<<< HEAD
-                results.extend((self.get_text(a), a['href']) for a in
-=======
                 results.extend((get_text(a), a['href']) for a in
->>>>>>> 1.6.0
-=======
-                results.extend((get_text(a), a['href']) for a in
->>>>>>> 1.6.0
                                direlist.find_all('a', class_='bookname'))
         return results
 
@@ -814,15 +530,7 @@ class MangaNelo(Downloader):
         data = {'search_style': 'tentruyen', 'searchword': query_str}
         url = self.site_url+'/home_json_search/'
         data = self.get_json(url, data, method='POST')
-<<<<<<< HEAD
-<<<<<<< HEAD
-        return [(self.get_text(BeautifulSoup(result['name'], 'html.parser')),
-=======
         return [(get_text(BeautifulSoup(result['name'], 'html.parser')),
->>>>>>> 1.6.0
-=======
-        return [(get_text(BeautifulSoup(result['name'], 'html.parser')),
->>>>>>> 1.6.0
                  self.site_url+'/manga/'+result['nameunsigned'])
                 for result in data]
 
