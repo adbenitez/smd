@@ -3,12 +3,20 @@ Simple Manga Downloader Changelog
 =================================
 
 
+Version 1.6.1
+-------------
+
+Released on July 31, 2018
+
+* **Fix:** Fixed function :func:`smd.utils.select_chapters` to return a ``list`` of chapters in the right order instead of an unordered set.
+
+
 Version 1.6.0
 -------------
 
 Released on July 31, 2018
 
-* **New:** Now ``smd`` is *smarter*, it keeps metadata about the mangas and remember download status, downloading only missing or incomplete chapters, also useful to download new chapters from ongoing mangas.
+* **New:** Now ``smd`` is *smarter*, it keeps meta-data about the mangas and remember download status, downloading only missing or incomplete chapters, also useful to download new chapters from ongoing mangas.
 * **New:** Added option ``--update`` (to get new chapters for ongoing mangas).
 * **New:** Added option ``--continue`` (to resume a canceled manga download).
 * **New:** Now ``smd`` have a multilingual interface, currently only *English* and *Spanish* languages are supported.
