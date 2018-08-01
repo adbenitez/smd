@@ -28,8 +28,6 @@ if lang == 'SYSTEM':
 else:
     lang = gettext.translation('smd', localedir=localedir, languages=[lang])
     lang.install()
-    #gettext.bindtextdomain('smd', localedir)
-    #gettext.textdomain('smd')
 gettext.gettext = _
 # must be imported after L10n:
 import argparse

@@ -354,11 +354,10 @@ class TestFunctions(unittest.TestCase):
         with open(os.path.join(self.data_dir, 'chapters.json')) as data_fh:
             chapters = [tuple(l) for l in json.load(data_fh)]
         selectors = ['1:10', '-1', '!-3', '1,3,5', ':5, !3, 7:, !9:10']
-        exp_values = [set(chapters[0:10]), set([chapters[-1]]),
-                      set(chapters) - set([chapters[-3]]),
-                      set([chapters[0], chapters[2], chapters[4]]),
-                      set(chapters[:5]+chapters[6:]) -
-                      set([chapters[2]]+chapters[8:10])]
+        exp_values = [chapters[:10], [chapters[-1]],
+                      chapters[:-3] + chapters[-2:],
+                      [chapters[0], chapters[2], chapters[4]],
+                      chapters[:2]+chapters[3:5]+chapters[6:8]+chapters[10:]]
         for selector, exp in zip(selectors, exp_values):
             with self.subTest(selector=selector):
                 selec = utils.select_chapters(chapters, selector)
