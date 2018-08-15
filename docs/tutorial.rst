@@ -111,7 +111,7 @@ To download from chapter 10th to 20th (ignoring chapter 15th) of 'Naruto':
    $ smd --chapters '10:20,!15' Naruto
 
 .. warning::
-   Chapters are enumerated based on they order in the chapter list, so this number may not match the chapter title (e.g. if there are a chapter named "15.5" actually it is the chapter 16 in the list and you should use "``smd --chapter 16``" to download it)
+   Chapters are enumerated based on they order in the chapter list, so this number may not match the chapter title (e.g. if there are a chapter titled "Episode 15.5" and actually it is the chapter 16 in the list, you should use "``smd --chapter 16``" to download it)
 
 To download from first chapter to 10th and the last chapter of 'Death Note':
 

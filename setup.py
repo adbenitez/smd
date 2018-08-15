@@ -5,13 +5,17 @@ smd setup script.
 
 import re
 
-from setuptools import find_packages, setup
+from setuptools import find_packages, setup  # type: ignore
 
 with open('README.rst', 'rt', encoding='utf8') as fh:
     README = fh.read()
 
 with open('smd/__init__.py', 'rt', encoding='utf8') as fh:
-    VERSION = re.search(r'__version__ = \'(.*?)\'', fh.read(), re.M).group(1)
+    match = re.search(r'__version__ = \'(.*?)\'', fh.read(), re.M)
+    if match:
+        VERSION = match.group(1)
+    else:
+        raise Exception('Version not found.')
 
 setup(
     name='smd',
@@ -24,11 +28,7 @@ setup(
     long_description_content_type='text/x-rst',
     url='https://adbenitez.github.io/smd',
     classifiers=(
-        # How mature is this project? Common values are
-        #   3 - Alpha
-        #   4 - Beta
-        #   5 - Production/Stable
-        'Development Status :: 5 - Production/Stable',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: End Users/Desktop',
         'Environment :: Console',
         'Environment :: Web Environment',
@@ -51,7 +51,7 @@ setup(
     },
     packages=find_packages(exclude=('tests*', 'docs')),
     install_requires=['beautifulsoup4'],
-    python_requires='>=3',
+    python_requires='>=3.5',
     entry_points={
         'console_scripts': [
             'smd=smd:main',

@@ -1,0 +1,10 @@
+{
+    "title": "chapter 1",
+    "url": "image_pages/naruto1_ch1_img1.html",
+    "current": 3,
+    "images": [
+        "image_pages/naruto1_ch1_img1.html",
+        "image_pages/naruto1_ch1_img2.html",
+        "image_pages/naruto1_ch1_img3.html"
+    ]
+}

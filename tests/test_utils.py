@@ -6,353 +6,430 @@ Offline tests for the :mod:`smd.util` module.
 
 """
 
+import configparser
 from io import StringIO
 import json
 import logging
 import os
 import shutil
 import sys
+import types
+import typing
 import unittest
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup  # type: ignore
 
-import smd.downloader as downloader
-import smd.utils as utils
+import smd.utils
+
+if typing.TYPE_CHECKING:
+    from typing import TextIO
+
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(ROOT, 'data', 'util')
 TEST_DIR = os.path.join(os.path.dirname(ROOT), 'test_utils_temp')
 
 
-def setUpModule():
-    """Creates a temporal directory where the tests are run."""
+def setUpModule() -> None:
     os.mkdir(TEST_DIR)
 
 
-def tearDownModule():
-    """Removes the temporal tests directory."""
+def tearDownModule() -> None:
     shutil.rmtree(TEST_DIR)
 
 
-class Downloader(downloader.Downloader):
-
-    """A basic implementation of the abstract class
-    :class:`smd.downloader.Downloader`"""
-
-    def __init__(self, name='util-test', lang='en',
-                 site_url='http://util-test.com'):
-        self._init_logger = lambda: True
-        downloader.Downloader.__init__(self, name, lang, site_url)
-        self.logger = logging
-
-    def get_chapters(self, manga_url):
+class MetaFolder(smd.utils.MetaFolder):
+    @staticmethod
+    def from_folder(path: str):
         pass
 
-    def get_images(self, chap_url):
-        pass
 
-    def search(self, manga):
-        pass
+class TestMetaFolder(unittest.TestCase):
+
+    """Tests :class:`smd.utils.MetaFolder` class."""
+
+    test_dir = None  # type: str
+    mf_dir = None    # type: str
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.test_dir = os.path.join(TEST_DIR, 'metafolder')
+        data_dir = os.path.join(DATA_DIR, 'metafolder')
+        os.mkdir(cls.test_dir)
+        os.chdir(cls.test_dir)
+        cls.mf_dir = os.path.join(data_dir, 'TestMetaFolder')
+
+    def test_init(self) -> None:
+        """Tests :meth:`smd.utils.MetaFolder.__init__` method."""
+        self.assertEqual(MetaFolder.data_filename, 'data.json')
+        path = 'testPath'
+        mf = MetaFolder(path)
+        self.assertEqual(mf.path, path)
+        ignored = ['_ignored', 'path']
+        self.assertEqual(mf._ignored, ignored)
+
+    def test_load_from_folder(self) -> None:
+        """Tests :meth:`smd.utils.MetaFolder._load_from_folder` method."""
+        mf_dir = os.path.join(self.test_dir, 'test_load_from_folder')
+        shutil.copytree(self.mf_dir, mf_dir)
+        mf = MetaFolder(mf_dir)
+        MetaFolder._load_from_folder(mf)
+        self.assertEqual(mf.attr1, 1)  # type: ignore
+        self.assertEqual(mf.attr2, 2)  # type: ignore
+
+    def test_data_file_property(self) -> None:
+        """Tests ``smd.utils.MetaFolder.data_file`` property."""
+        path = 'testPath'
+        mf = MetaFolder(path)
+        exp_data_file = os.path.join(path, MetaFolder.data_filename)
+        self.assertEqual(mf.data_file, exp_data_file)
+
+    def test_is_valid(self) -> None:
+        """Tests :meth:`smd.utils.MetaFolder.is_valid` method."""
+        mf_dir = os.path.join(self.test_dir, 'test_is_valid')
+        shutil.copytree(self.mf_dir, mf_dir)
+        self.assertTrue(MetaFolder.is_valid(mf_dir))
+        self.assertFalse(MetaFolder.is_valid(self.test_dir))
+
+    def test_save_data(self) -> None:
+        """Tests :meth:`smd.utils.MetaFolder.save_data` method."""
+        mf_dir = os.path.join(self.test_dir, 'test_save_data')
+        shutil.copytree(self.mf_dir, mf_dir)
+        mf = MetaFolder(mf_dir)
+        mf.attr1, mf.attr2, mf.attrNEW = 'a', 'b', 'c'  # type: ignore
+        mf.save_data()
+        with open(os.path.join(mf_dir, MetaFolder.data_filename)) as data_fh:
+            data = json.load(data_fh)
+        self.assertEqual(len(data), 3)
+        self.assertEqual(mf.attr1, data['attr1'])  # type: ignore
+        self.assertEqual(mf.attr2, data['attr2'])  # type: ignore
+        self.assertEqual(mf.attrNEW, data['attrNEW'])  # type: ignore
+        self.assertEqual('a', data['attr1'])  # type: ignore
+        self.assertEqual('b', data['attr2'])  # type: ignore
+        self.assertEqual('c', data['attrNEW'])  # type: ignore
 
 
 class TestChapter(unittest.TestCase):
 
     """Tests :class:`smd.utils.Chapter` class."""
 
+    test_dir = None  # type: str
+    chap_dir = None  # type: str
+
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         cls.test_dir = os.path.join(TEST_DIR, 'chapter')
-        cls.data_dir = os.path.join(DATA_DIR, 'chapter')
+        data_dir = os.path.join(DATA_DIR, 'chapter')
+        cls.chap_dir = os.path.join(data_dir, 'chap1')
         os.mkdir(cls.test_dir)
         os.chdir(cls.test_dir)
 
-    def test_init(self):
-        """Tests :meth:`smd.utils.Chapter.__init__` function."""
-        path = os.path.join(self.test_dir, 'TestChapter')
+    def test_init(self) -> None:
+        """Tests :meth:`smd.utils.Chapter.__init__` method."""
+        self.assertEqual(smd.utils.Chapter.data_filename, 'chapter.json')
+        path = 'test path'
         title = 'Test Chapter'
         url = 'http://test-chapter.com'
-        chap = utils.Chapter(path, title, url)
+        chap = smd.utils.Chapter(path, title, url)
         self.assertEqual(chap.path, path)
-        self.assertEqual(chap['title'], title)
-        self.assertEqual(chap['url'], url)
-        self.assertEqual(chap['current'], -1)
-        self.assertEqual(chap['images'], [])
+        self.assertEqual(chap.title, title)
+        self.assertEqual(chap.url, url)
+        self.assertEqual(chap.current, -1)
+        self.assertEqual(chap.images, [])
 
-    def test_str(self):
-        """Tests :meth:`smd.utils.Chapter.__str__` function."""
+    def test_str(self) -> None:
+        """Tests :meth:`smd.utils.Chapter.__str__` method."""
         title = 'test chapter'
-        chap = utils.Chapter(self.test_dir, title=title)
+        chap = smd.utils.Chapter('path', title, 'url')
         self.assertEqual(str(chap), title)
 
-    def test_repr(self):
-        """Tests :meth:`smd.utils.Chapter.__repr__` function."""
+    def test_repr(self) -> None:
+        """Tests :meth:`smd.utils.Chapter.__repr__` method."""
         title = 'test chapter'
         url = 'http://chapter-test.com'
         current = -1
-        chap = utils.Chapter('path', title, url)
+        chap = smd.utils.Chapter('path', title, url)
         exp_repr = '({}, {}, {})'.format(title, url, current)
         self.assertEqual(repr(chap), exp_repr)
 
-    def test_from_folder(self):
-        """Tests :meth:`smd.utils.Chapter.from_folder` function."""
-        chap_dir = os.path.join(self.data_dir, 'chap1')
-        chap = utils.Chapter.from_folder(chap_dir)
-        self.assertEqual(chap['title'], 'chapter 1')
-        self.assertEqual(chap['url'], 'image_pages/naruto1_ch1_img1.html')
-        self.assertEqual(chap['current'], 3)
-        self.assertEqual(len(chap['images']), 3)
-
-    def test_is_chapter(self):
-        """Tests :meth:`smd.utils.Chapter.is_chapter` function."""
-        chap_dir = os.path.join(self.data_dir, 'chap1')
-        self.assertTrue(utils.Chapter.is_chapter(chap_dir))
-
-    def test_save_data(self):
-        """Tests :meth:`smd.utils.Chapter.save_data` function."""
-        utils.Chapter(self.test_dir).save_data()
-        self.assertTrue(os.path.isfile(utils.Chapter._filename))
+    def test_from_folder(self) -> None:
+        """Tests :meth:`smd.utils.Chapter.from_folder` method."""
+        chap_dir = os.path.join(self.test_dir, 'test_from_folder')
+        shutil.copytree(self.chap_dir, chap_dir)
+        chap = smd.utils.Chapter.from_folder(chap_dir)
+        self.assertEqual(chap.title, 'chapter 1')
+        self.assertEqual(chap.url, 'image_pages/naruto1_ch1_img1.html')
+        self.assertEqual(chap.current, 3)
+        self.assertEqual(len(chap.images), 3)
 
 
 class TestConfig(unittest.TestCase):
 
     """Tests :class:`smd.utils.Config` class."""
 
+    test_dir = None  # type: str
+    cfg_path = None  # type: str
+
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         cls.test_dir = os.path.join(TEST_DIR, 'config')
         cls.cfg_path = os.path.join(cls.test_dir, 'smd.cfg')
         os.mkdir(cls.test_dir)
         os.chdir(cls.test_dir)
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         if os.path.exists(self.cfg_path):
             os.remove(self.cfg_path)
 
-    def test_init(self):
-        """Tests :meth:`smd.utils.Config.__init__` function."""
-        cfg = utils.Config(self.cfg_path)
+    def test_init_getitem_and_setitem(self) -> None:
+        """Tests :meth:`smd.utils.Config.__init__` and
+        ``__getitem__``/``__setitem__`` methods."""
+        cfg = smd.utils.Config(self.cfg_path)
         self.assertFalse(os.path.exists(self.cfg_path))
         self.assertEqual(cfg.path, self.cfg_path)
+        self.assertIsInstance(cfg._parser, configparser.ConfigParser)
         cfg['test'] = 'true'
         self.assertEqual(cfg['test'], 'true')
         with self.assertRaises(KeyError):
             cfg['bad_key']
 
-    def test_exists(self):
-        """Tests :meth:`smd.utils.Config.exists` function."""
-        cfg = utils.Config(self.cfg_path)
+    def test_exists(self) -> None:
+        """Tests :meth:`smd.utils.Config.exists` method."""
+        cfg = smd.utils.Config(self.cfg_path)
         self.assertFalse(cfg.exists())
         with open(self.cfg_path, 'w') as fd:
             fd.write('[DEFAULT]\ntest=true\n\n')
         self.assertTrue(cfg.exists())
 
-    def test_load(self):
-        """Tests :meth:`smd.utils.Config.load` function."""
-        cfg = utils.Config(self.cfg_path)
+    def test_load(self) -> None:
+        """Tests :meth:`smd.utils.Config.load` method."""
+        cfg = smd.utils.Config(self.cfg_path)
         self.assertFalse(cfg.load())
+        with self.assertRaises(KeyError):
+            cfg['test']
         with open(self.cfg_path, 'w') as fd:
             fd.write('[DEFAULT]\ntest=true\n\n')
         self.assertTrue(cfg.load())
         self.assertEqual(cfg['test'], 'true')
 
-    def test_reset(self):
-        """Tests :meth:`smd.utils.Config.reset` function."""
-        cfg = utils.Config(self.cfg_path)
+    def test_reset(self) -> None:
+        """Tests :meth:`smd.utils.Config.reset` method."""
+        cfg = smd.utils.Config(self.cfg_path)
         cfg['language'] = 'new lang'
         self.assertEqual(cfg['language'], 'new lang')
+        old_parser = cfg._parser
         cfg.reset()
-        self.assertNotEqual(cfg['language'], 'new lang')
+        self.assertEqual(cfg['language'], 'SYSTEM')
+        self.assertEqual(cfg['manga_dir'], '.')
 
-    def test_save(self):
-        """Tests :meth:`smd.utils.Config.save` function."""
-        cfg = utils.Config(self.cfg_path)
+    def test_save(self) -> None:
+        """Tests :meth:`smd.utils.Config.save` method."""
+        cfg = smd.utils.Config(self.cfg_path)
         self.assertFalse(os.path.exists(self.cfg_path))
         cfg.save()
         self.assertTrue(os.path.exists(self.cfg_path))
+
+
+class TestConsoleFilter(unittest.TestCase):
+
+    """Tests :class:`smd.utils.ConsoleFilter` class."""
+
+    def test_filter(self) -> None:
+        class DummyRecord(logging.LogRecord):
+            def __init__(self):
+                self.exc_info = 'info'
+                self.exc_text = 'text'
+        self.assertIsInstance(smd.utils.ConsoleFilter(), logging.Filter)
+        record = DummyRecord()
+        self.assertTrue(smd.utils.ConsoleFilter.filter(record))
+        self.assertIsNone(record.exc_info)
+        self.assertIsNone(record.exc_text)
 
 
 class TestManga(unittest.TestCase):
 
     """Tests :class:`smd.utils.Manga` class."""
 
+    test_dir = None  # type: str
+    manga_dir = None  # type: str
+
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         cls.test_dir = os.path.join(TEST_DIR, 'manga')
-        cls.data_dir = os.path.join(DATA_DIR, 'manga')
+        data_dir = os.path.join(DATA_DIR, 'manga')
+        cls.manga_dir = os.path.join(data_dir, 'TestManga')
         os.mkdir(cls.test_dir)
         os.chdir(cls.test_dir)
 
-    def test_init(self):
-        """Tests :meth:`smd.utils.Manga.__init__` function."""
-        path = os.path.join(self.test_dir, 'TestManga')
+    def test_init(self) -> None:
+        """Tests :meth:`smd.utils.Manga.__init__` method."""
+        self.assertEqual(smd.utils.Manga.data_filename, 'manga.json')
+        path = 'test path'
         title = 'Test Manga'
         url = 'http://test-manga.com'
         site = 'manga-site'
-        manga = utils.Manga(path, title, url, site)
+        manga = smd.utils.Manga(path, title, url, site)
         self.assertEqual(manga.path, path)
-        self.assertEqual(manga['title'], title)
-        self.assertEqual(manga['url'], url)
-        self.assertEqual(manga['site'], site)
+        self.assertEqual(manga.title, title)
+        self.assertEqual(manga.url, url)
+        self.assertEqual(manga.site, site)
 
-    def test_str(self):
-        """Tests :meth:`smd.utils.Manga.__str__` function."""
+    def test_str(self) -> None:
+        """Tests :meth:`smd.utils.Manga.__str__` method."""
         title = 'test manga'
-        manga = utils.Manga(self.test_dir, title=title)
+        manga = smd.utils.Manga('path', title, 'url', 'site')
         self.assertEqual(str(manga), title)
 
-    def test_repr(self):
-        """Tests :meth:`smd.utils.Manga.__repr__` function."""
+    def test_repr(self) -> None:
+        """Tests :meth:`smd.utils.Manga.__repr__` method."""
         title = 'test manga'
         url = 'http://manga-test.com'
         site = 'test-site'
-        manga = utils.Manga('path', title, url, site)
+        manga = smd.utils.Manga('path', title, url, site)
         exp_repr = '({}, {}, {})'.format(title, url, site)
         self.assertEqual(repr(manga), exp_repr)
 
-    def test_from_folder(self):
-        """Tests :meth:`smd.utils.Manga.from_folder` function."""
-        manga_dir = os.path.join(self.data_dir, 'TestManga')
-        manga = utils.Manga.from_folder(manga_dir)
-        self.assertEqual(manga['title'], 'TestManga')
-        self.assertEqual(manga['url'], 'mangas/testmanga.html')
-        self.assertEqual(manga['site'], 'manga-test')
+    def test_chapters(self) -> None:
+        """Tests :meth:`smd.utils.Manga.chapters` method."""
+        manga_dir = os.path.join(self.test_dir, 'test_chapters')
+        shutil.copytree(self.manga_dir, manga_dir)
+        manga = smd.utils.Manga.from_folder(manga_dir)
+        chaps_gen = manga.chapters()
+        self.assertIsInstance(chaps_gen, types.GeneratorType)
+        chaps = list(chaps_gen)
+        self.assertEqual(len(chaps), 5)
+        for i, chap in enumerate(chaps, 1):
+            with self.subTest(i=i):
+                self.assertIsInstance(chap, smd.utils.Chapter)
+                self.assertEqual(chap.title, 'chapter {}'.format(i))
 
-    def test_is_manga(self):
-        """Tests :meth:`smd.utils.Manga.is_manga` function."""
-        manga_dir = os.path.join(self.data_dir, 'TestManga')
-        self.assertTrue(utils.Manga.is_manga(manga_dir))
+    def test_from_folder(self) -> None:
+        """Tests :meth:`smd.utils.Manga.from_folder` method."""
+        manga_dir = os.path.join(self.test_dir, 'test_from_folder')
+        shutil.copytree(self.manga_dir, manga_dir)
+        manga = smd.utils.Manga.from_folder(manga_dir)
+        self.assertEqual(manga.title, 'TestManga')
+        self.assertEqual(manga.url, 'mangas/testmanga.html')
+        self.assertEqual(manga.site, 'manga-test')
 
-    def test_save_data(self):
-        """Tests :meth:`smd.utils.Manga.save_data` function."""
-        utils.Manga(self.test_dir).save_data()
-        self.assertTrue(os.path.isfile(utils.Manga._filename))
+    def test_get_new_chapter_path(self) -> None:
+        """Tests :meth:`smd.utils.Manga.get_new_chapter_path` method."""
+        manga_dir = os.path.join(self.test_dir, 'test_get_new_chapter_path')
+        os.mkdir(manga_dir)
+        manga = smd.utils.Manga(manga_dir, 'title', 'url', 'site')
+        self.assertEqual(manga.get_new_chapter_path(),
+                         os.path.join(manga.path, '000001'))
+        for i in range(1, 3):
+            path = os.path.join(manga.path, str(i).zfill(6))
+            with self.subTest(i=i):
+                self.assertEqual(manga.get_new_chapter_path(), path)
+            os.mkdir(path)
+        self.assertEqual(manga.get_new_chapter_path(),
+                         os.path.join(manga.path, '000003'))
+        path = os.path.join(manga.path, '000002')
+        os.rmdir(path)
+        self.assertEqual(manga.get_new_chapter_path(), path)
 
 
 class TestFunctions(unittest.TestCase):
 
     """Tests functions on :mod:`smd.util`."""
 
+    stdin = None     # type: TextIO
+    stdout = None    # type: TextIO
+    test_dir = None  # type: str
+    data_dir = None  # type: str
+
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         cls.stdin = sys.stdin
-        cls.sys_exit = sys.exit
+        cls.stdout = sys.stdout
         cls.test_dir = os.path.join(TEST_DIR, 'functions')
         cls.data_dir = DATA_DIR
         os.mkdir(cls.test_dir)
         os.chdir(cls.test_dir)
 
     @classmethod
-    def tearDownClass(cls):
+    def tearDownClass(cls) -> None:
         sys.stdin = cls.stdin
-        sys.exit = cls.sys_exit
+        sys.stdout = cls.stdout
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         sys.stdin.close()
-        sys.exit = self.sys_exit
+        sys.stdout = self.stdout
 
-    def test_create_config_folder(self):
-        """Tests :func:`smd.util.create_config_folder` function."""
-        exp_dir = os.path.join(os.path.expanduser('~'), 'smd')
-        if os.path.exists(exp_dir):
-            shutil.rmtree(exp_dir)
-        config_dir = utils.create_config_folder()
-        self.assertEqual(config_dir, exp_dir)
-        self.assertTrue(os.path.isdir(exp_dir))
+    def test_die(self) -> None:
+        exp_msg = 'testing die'
+        sys.stdout = StringIO()
+        with self.assertRaises(SystemExit):  # type: ignore
+            smd.utils.die(exp_msg)
+        sys.stdout.seek(0)
+        msg = sys.stdout.read()
+        self.assertEqual(msg, exp_msg+'\n')
 
-    def test_die(self):
-        def _sys_exit(status=0):
-            nonlocal works
-            works = True
-        works = False
-        sys.exit = _sys_exit
-        utils.die('testing die')
-        self.assertTrue(works)
-
-    def test_download(self):
-        """Tests :func:`smd.util.download` function."""
-        downloaders = [Downloader('d{}'.format(i)) for i in range(1, 4)]
-        sys.stdin = StringIO("1\n1")
-        manga = 'naruto'
-        chap_selectors = None
-        tryall = True
-        success = utils.download(downloaders[:], manga, chap_selectors, tryall)
-        self.assertFalse(success)
-
-    def test_filter_downloaders(self):
-        """Tests :func:`smd.util.filter_downloaders` function."""
-        langs = 'en en es en ru'.split()
-        downloaders = [Downloader('d{}'.format(i), lang)
-                       for i, lang in enumerate(langs, 1)]
-        sys.stdin = StringIO('1\n')
-        downls = utils.filter_downloaders('wrong lang', downloaders)
-        exp_downls = [d for d in downloaders
-                      if d.lang == sorted(set(langs))[0]]
-        self.assertEqual(downls, exp_downls)
-
-    def test_get_mangas(self):
+    def test_get_mangas(self) -> None:
         """Tests :func:`smd.util.get_mangas` function."""
-        mangas = utils.get_mangas(os.path.join(self.data_dir, 'mangas_folder'))
+        mangas_dir = os.path.join(self.test_dir, 'test_get_mangas')
+        shutil.copytree(os.path.join(self.data_dir, 'mangas_folder'),
+                        mangas_dir)
+        mangas = smd.utils.get_mangas(mangas_dir)
         self.assertEqual(len(mangas), 3)
+        for i, manga in enumerate(mangas, 1):
+            with self.subTest(i=i):
+                self.assertIsInstance(manga, smd.utils.Manga)
+                self.assertEqual(manga.title, 'TestManga {}'.format(i))
 
-    def test_get_text(self):
+    def test_get_text(self) -> None:
         """Tests :func:`smd.util.get_text` function."""
         tags = ['<p>h&eacute;llo\n<b>world</b>\n&ntilde;<i><!---c---></i></p>',
                 '<p>\n\nhell&oacute;\n <a href="#">&lt;again&gt</a>\n\n\n</p>']
         exp_texts = ['héllo world ñ', 'helló  <again>']
         for tag, exp_text in zip(tags, exp_texts):
             with self.subTest(tag=tag):
-                text = utils.get_text(BeautifulSoup(tag, 'html.parser'))
+                text = smd.utils.get_text(BeautifulSoup(tag, 'html.parser'))
                 self.assertEqual(text, exp_text)
 
-    def test_list_downloaders(self):
-        """Tests :func:`smd.util.list_downloaders` function."""
-        langs = 'en es de'.split()
-        downloaders = [Downloader('d{}'.format(i), lang)
-                       for i, lang in enumerate(langs, 1)]
-        utils.list_downloaders(downloaders)
-
-    def test_mkdir(self):
+    def test_mkdir(self) -> None:
         """Tests :func:`smd.util.mkdir` function."""
         sys.stdin = StringIO('td\ntd2\ntd3\n')
         test_dir = 'test_mkdir'
         dirs = [test_dir, test_dir, 'test\\/mkdir', 'test[>:-/]mkdir']
         for d in dirs:
             with self.subTest(d=d):
-                utils.mkdir('.', d)
+                smd.utils.mkdir('.', d)
         self.assertTrue(os.path.isdir(test_dir))
+        self.assertEqual(sys.stdin.read(), '')
 
-    def test_resume(self):
-        """Tests :func:`smd.util.resume` function."""
-        i, j = 1, 2
-        sys.stdin = StringIO('{} {}'.format(i, j))
-        data_md = os.path.join(self.data_dir, 'mangas_folder')
-        mangas_dir = os.path.join(self.test_dir, 'mangas_resume')
-        shutil.copytree(data_md, mangas_dir)
-        downloaders = [Downloader('util-test')]
-        resumed_mangas = []
-        downloaders[0].resume = lambda m: resumed_mangas.append(m['title'])
-        utils.resume(downloaders, mangas_dir)
-        exp_resumed_mangas = ['TestManga {}'.format(i),
-                              'TestManga {}'.format(j)]
-        self.assertEqual(resumed_mangas, exp_resumed_mangas)
-        mangas_dirs = [os.path.join(mangas_dir, 'm{}'.format(i)),
-                       os.path.join(mangas_dir, 'm{}'.format(j))]
-        resumed_mangas = []
-        utils.resume(downloaders, mangas_dirs)
-        self.assertEqual(resumed_mangas, exp_resumed_mangas)
+    def test_persistent_operation(self) -> None:
+        """Tests :func:`smd.util.persistent_operation` function."""
+        @smd.utils.persistent_operation
+        def testfunc():
+            nonlocal msg, exec_times
+            exec_times += 1
+            if exec_times == 1:
+                raise KeyboardInterrupt
+            elif exec_times == 2:
+                 msg = 'KeyboardInterrupt'
+            elif exec_times == 3:
+                raise SystemExit
+            elif exec_times == 4:
+                msg = 'SystemExit'
+            else:
+                raise Exception('Function called unexpectedly.')
 
-    @unittest.expectedFailure
-    def test_fail_select_chapters(self):
-        """Tests :func:`smd.util.select_chapters` function."""
-        selectors = ['1:0', 'inject_code()', '1000']
-        for selector in selectors:
-            with self.subTest(selector=selector):
-                utils.select_chapters([], selector)
+        msg, exec_times = '', 0
+        with self.assertRaises(KeyboardInterrupt):  # type: ignore
+            testfunc()
+        self.assertEqual(msg, 'KeyboardInterrupt')
+        with self.assertRaises(SystemExit):  # type: ignore
+            testfunc()
+        self.assertEqual(msg, 'SystemExit')
 
-    def test_select_chapters(self):
+    def test_select_chapters(self) -> None:
         """Tests :func:`smd.util.select_chapters` function."""
         with open(os.path.join(self.data_dir, 'chapters.json')) as data_fh:
-            chapters = [tuple(l) for l in json.load(data_fh)]
+            chapters = [smd.utils.Chapter('', title, url) for title, url
+                        in json.load(data_fh)]
         selectors = ['1:10', '-1', '!-3', '1,3,5', ':5, !3, 7:, !9:10']
         exp_values = [chapters[:10], [chapters[-1]],
                       chapters[:-3] + chapters[-2:],
@@ -360,76 +437,27 @@ class TestFunctions(unittest.TestCase):
                       chapters[:2]+chapters[3:5]+chapters[6:8]+chapters[10:]]
         for selector, exp in zip(selectors, exp_values):
             with self.subTest(selector=selector):
-                selec = utils.select_chapters(chapters, selector)
+                selec = smd.utils.select_chapters(chapters, selector)
                 self.assertEqual(selec, exp)
+        selectors = ['1:0', 'inject_code()', '1000']
+        for selector in selectors:
+            with self.subTest(selector=selector):
+                with self.assertRaises(SystemExit):  # type: ignore
+                    smd.utils.select_chapters(chapters, selector)
 
-    def test_select_downloader(self):
-        """Tests :func:`smd.util.select_downloader` function."""
-        downloaders = [Downloader('d{}'.format(i)) for i in range(1, 4)]
-        i = 2
-        exp_downl = downloaders[i-1]
-        sys.stdin = StringIO("{}\n{}\n{}".format(len(downloaders)+1, -1, i))
-        downl = utils.select_downloader(downloaders)
-        self.assertIs(downl, exp_downl)
-
-    def test_select_lang(self):
-        """Tests :func:`smd.util.select_lang` function."""
-        langs = 'es en de'.split()
+    def test_select_mangas(self) -> None:
+        """Tests :func:`smd.util.select_mangas` function."""
         i = 1
-        stdin = "{}\n{}\n{}".format(len(langs)+1, -1, i)
-        sys.stdin = StringIO(stdin)
-        lang = utils.select_lang(langs)
-        self.assertEqual(lang, langs[i-1])
-
-    def test_select_manga(self):
-        """Tests :func:`smd.util.select_manga` function."""
-        i = 1
-        mangas = 'm1 m2 m3'.split()
+        mangas = [smd.utils.Manga('path', title, 'url', 'site')
+                  for title in 'm1 m2 m3'.split()]
         sys.stdin = StringIO("{}\n{}\n{}".format(len(mangas)+1, -1, i))
-        manga = utils.select_manga(mangas)
-        exp_manga = mangas[i-1]
-        self.assertEqual(manga, exp_manga)
+        smangas = smd.utils.select_mangas(mangas, multiple=False)
+        exp_mangas = [mangas[i-1]]
+        self.assertEqual(smangas, exp_mangas)
+        self.assertEqual(sys.stdin.read(), '')
         sys.stdin = StringIO("{},{}".format(len(mangas), i))
-        exp_manga = [mangas[i-1], mangas[-1]]
-        manga = utils.select_manga(mangas, multiple=True)
-        self.assertEqual(manga, exp_manga)
+        exp_mangas = [mangas[-1], mangas[i-1]]
+        smangas = smd.utils.select_mangas(mangas)
+        self.assertEqual(smangas, exp_mangas)
+        self.assertEqual(sys.stdin.read(), '')
 
-    def test_set_site(self):
-        """Tests :func:`smd.util.set_site` function."""
-        downloaders = [Downloader('d{}'.format(i)) for i in range(1, 4)]
-        i = 2
-        site = 'd{}'.format(i)
-        exp_downl = downloaders[i-1]
-        utils.set_site(site, downloaders)
-        self.assertIs(downloaders[0], exp_downl)
-        sys.stdin = StringIO("{}\n{}\n{}".format(len(downloaders)+1, -1, i))
-        exp_downl = downloaders[i-1]
-        utils.set_site('unknow site', downloaders)
-        self.assertIs(downloaders[0], exp_downl)
-
-    def test_update(self):
-        """Tests :func:`smd.util.update` function."""
-        def update(manga):
-            nonlocal updated_mangas
-            updated_mangas.append(manga['title'])
-        i, j = 1, 2
-        sys.stdin = StringIO('{} {}'.format(i, j))
-        data_md = os.path.join(self.data_dir, 'mangas_folder')
-        mangas_dir = os.path.join(self.test_dir, 'mangas_update')
-        shutil.copytree(data_md, mangas_dir)
-        downloaders = [Downloader('util-test')]
-        updated_mangas = []
-        downloaders[0].update = update
-        utils.update(downloaders, mangas_dir)
-        exp_updated_mangas = ['TestManga {}'.format(i),
-                              'TestManga {}'.format(j)]
-        self.assertEqual(updated_mangas, exp_updated_mangas)
-        mangas_dirs = [os.path.join(mangas_dir, 'm{}'.format(i)),
-                       os.path.join(mangas_dir, 'm{}'.format(j))]
-        updated_mangas = []
-        utils.update(downloaders, mangas_dirs)
-        self.assertEqual(updated_mangas, exp_updated_mangas)
-
-    @unittest.skip("no implemented yet")
-    def test_language_change(self):
-        raise Exception('no implemented')

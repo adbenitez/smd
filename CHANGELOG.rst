@@ -2,6 +2,21 @@
 Simple Manga Downloader Changelog
 =================================
 
+Version 1.6.2
+-------------
+
+Released on August 15, 2018
+
+* **Fix:** Fixed bug in ``smd.__init__.py`` file: :meth:`show_copyright` isn't in package :mod:`smd.utils` anymore.
+* **New:** Code re-factorized with annotations, for static typing checking with ``mypy``.
+* **New:** :func:`smd.downloader.Downloader.get` separated in two new functions :func:`~smd.downloader.Downloader.get_bytes` and :func:`~smd.downloader.Downloader.get_str`.
+* **New:** Classes :class:`~smd.utils.Chapter` and :class:`~smd.utils.Manga` now use attributes instead of ``__setitem__`` and ``__getitem__`` for accessing meta data.
+* **New:** Created :class:`smd.utils.MetaFolder` class base for :class:`~smd.utils.Chapter` and :class:`~smd.utils.Manga`.
+* **New:** Removed variable ``smd.utlis.USER_AGENT`` and created function :func:`smd.utils.random_ua` instead.
+* **New:** Chapters folders are now named using numbers to avoid invalid folder names.
+* **New:** :func:`~smd.downloader.Downloader.search` now returns a list of :class:`~smd.utils.Manga` and :func:`~smd.downloader.Downloader.get_chapters` returns a list of :class:`~smd.utils.Chapter`
+* **Fix:** Fixed localization setup to fallback to the default if the language set in the configuration file is not supported.
+
 
 Version 1.6.1
 -------------
