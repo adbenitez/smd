@@ -1,3 +1,6 @@
+**WARNING:** Unmaintained, check https://github.com/adbenitez/simplebot_manga for a similar project to
+download manga.
+
 ***********************           
 Simple Manga Downloader
 ***********************           
@@ -105,8 +108,6 @@ Support
 =======
 
 To request new sites or if you are having issues, you can `open an issue <https://github.com/adbenitez/smd/issues/new>`_. For more information and tutorial read the `smd manual`_.
-
-If you want to support **smd**, please donate to http://liberapay.com/adbenitez, any little help is really appreciated, thanks for your support!
 
 
 License
